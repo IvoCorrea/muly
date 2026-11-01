@@ -26,3 +26,7 @@ jwt:
 
 cors:
   allowed-origin: ${FRONTEND_URL}
+
+spotify:
+  client-id: ${SPOTIFY_CLIENT_ID:}
+  client-secret: ${SPOTIFY_CLIENT_SECRET:}
