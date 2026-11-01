@@ -1,34 +1,32 @@
+# Environments & Secrets
 .env
-HELP.md
+**/.env
+
+# Java / Maven
 target/
+**/target/
+HELP.md
+**/HELP.md
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
 
-### STS ###
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
+# Node / Angular
+node_modules/
+**/node_modules/
+.angular/
+**/.angular/
+dist/
+**/dist/
 
-### IntelliJ IDEA ###
-.idea
+# IDEs & System
+.idea/
 *.iws
 *.iml
 *.ipr
-
-### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
-
-### VS Code ###
 .vscode/
+.project
+.classpath
+.settings/
+.DS_Store
+Thumbs.db
