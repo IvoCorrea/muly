@@ -3,6 +3,7 @@ package com.muly.auth.security;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -28,12 +29,13 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity httpSecurity) throws Exception {
         return httpSecurity
                 .csrf(AbstractHttpConfigurer::disable)
+                .cors(Customizer.withDefaults())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.POST,"/auth/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/auth/**").permitAll()
                         .requestMatchers("/profile/me/**").authenticated() // .authenticated primeiro para /me nao ser tratado como /{username}
                         .requestMatchers("/profile/me").authenticated()
-                        .requestMatchers(HttpMethod.GET,"/profile/{username}").permitAll()
-                        .requestMatchers(HttpMethod.GET,"/catalog/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/profile/{username}").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/catalog/**").permitAll()
                         .anyRequest().authenticated()
                 ).sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class).build();
