@@ -25,7 +25,7 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
         </div>
       } @else if (album) {
         
-        <!-- Header do ├ülbum -->
+        <!-- Header do Álbum -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8 pb-10 border-b border-[#242c34]">
           
           <!-- Capa -->
@@ -39,12 +39,12 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
             </div>
           </div>
 
-          <!-- Metadados & A├º├úo de Review -->
+          <!-- Metadados & Ação de Review -->
           <div class="md:col-span-2 flex flex-col justify-between">
             <div>
               <div class="flex items-center gap-3">
                 <span class="text-xs font-bold text-gray-400 uppercase tracking-widest bg-[#1c2228] px-2.5 py-1 rounded">
-                  ├ülbum
+                  Álbum
                 </span>
                 @if (album.releaseYear) {
                   <span class="text-xs text-gray-500 font-semibold">{{ album.releaseYear }}</span>
@@ -58,13 +58,13 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                 {{ album.artist }}
               </p>
 
-              <!-- M├®dia de Avalia├º├Áes -->
+              <!-- Média de Avaliações -->
               <div class="flex flex-wrap items-center gap-4 mt-4">
                 <div class="flex items-center gap-4 py-3 px-4 bg-[#1b2228] rounded-lg border border-[#2a343d] w-fit">
                   <div>
-                    <span class="text-[10px] uppercase tracking-wider font-bold text-gray-400 block">M├®dia do ├ülbum</span>
+                    <span class="text-[10px] uppercase tracking-wider font-bold text-gray-400 block">Média do Álbum</span>
                     <span class="text-2xl font-black text-white">
-                      {{ reviewsSummary?.averageRating ? (reviewsSummary?.averageRating?.toFixed(1)) : 'ÔÇö' }}
+                      {{ reviewsSummary?.averageRating ? (reviewsSummary?.averageRating?.toFixed(1)) : '—' }}
                     </span>
                     <span class="text-xs text-gray-500"> / 5.0</span>
                   </div>
@@ -72,7 +72,7 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                   <div>
                     <app-star-rating [rating]="reviewsSummary?.averageRating || 0" [readonly]="true" [showValue]="false" />
                     <span class="text-[11px] text-gray-400">
-                      {{ reviewsSummary?.totalReviews || 0 }} {{ reviewsSummary?.totalReviews === 1 ? 'avalia├º├úo' : 'avalia├º├Áes' }}
+                      {{ reviewsSummary?.totalReviews || 0 }} {{ reviewsSummary?.totalReviews === 1 ? 'avaliação' : 'avaliações' }}
                     </span>
                   </div>
                 </div>
@@ -81,10 +81,10 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                   <div class="flex items-center gap-4 py-3 px-4 bg-emerald-500/10 rounded-lg border border-emerald-500/30 w-fit">
                     <div>
                       <span class="text-[10px] uppercase tracking-wider font-bold text-emerald-400 block truncate max-w-[180px]">
-                        Faixa #{{ selectedTrack.trackNumber }} ÔÇó {{ selectedTrack.title }}
+                        Faixa #{{ selectedTrack.trackNumber }} • {{ selectedTrack.title }}
                       </span>
                       <span class="text-2xl font-black text-white">
-                        {{ getTrackAverageRating(selectedTrack.trackNumber) !== null ? getTrackAverageRating(selectedTrack.trackNumber)!.toFixed(1) : 'ÔÇö' }}
+                        {{ getTrackAverageRating(selectedTrack.trackNumber) !== null ? getTrackAverageRating(selectedTrack.trackNumber)!.toFixed(1) : '—' }}
                       </span>
                       <span class="text-xs text-gray-400"> / 5.0</span>
                     </div>
@@ -92,7 +92,7 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                     <div>
                       <app-star-rating [rating]="getTrackAverageRating(selectedTrack.trackNumber) || 0" [readonly]="true" [showValue]="false" />
                       <span class="text-[11px] text-emerald-300">
-                        {{ getTrackReviewsCount(selectedTrack.trackNumber) }} {{ getTrackReviewsCount(selectedTrack.trackNumber) === 1 ? 'avalia├º├úo da faixa' : 'avalia├º├Áes da faixa' }}
+                        {{ getTrackReviewsCount(selectedTrack.trackNumber) }} {{ getTrackReviewsCount(selectedTrack.trackNumber) === 1 ? 'avaliação da faixa' : 'avaliações da faixa' }}
                       </span>
                     </div>
                   </div>
@@ -100,7 +100,7 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
               </div>
             </div>
 
-            <!-- Caixa de Avalia├º├úo do Usu├írio -->
+            <!-- Caixa de Avaliação do Usuário -->
             <div class="mt-6 bg-[#161b20] border border-[#2a343d] rounded-lg p-5">
               @if (authService.isAuthenticated()) {
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-[#242c34]">
@@ -110,7 +110,7 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                         class="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded"
                         [ngClass]="selectedTrack ? 'bg-emerald-500 text-black' : 'bg-[#242c34] text-emerald-400'"
                       >
-                        {{ selectedTrack ? 'Avaliando M├║sica' : 'Avaliando ├ülbum Completo' }}
+                        {{ selectedTrack ? 'Avaliando Música' : 'Avaliando Álbum Completo' }}
                       </span>
                       @if (selectedTrack) {
                         <button
@@ -118,7 +118,7 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                           (click)="selectTrack(null)"
                           class="cursor-pointer text-[11px] text-gray-400 hover:text-white underline"
                         >
-                          Voltar para o ├ílbum
+                          Voltar para o álbum
                         </button>
                       }
                     </div>
@@ -126,12 +126,12 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                       @if (selectedTrack) {
                         #{{ selectedTrack.trackNumber }} - {{ selectedTrack.title }}
                       } @else {
-                        {{ album.title }} (├ülbum Completo)
+                        {{ album.title }} (Álbum Completo)
                       }
                     </h3>
                   </div>
 
-                  <!-- Seletor r├ípido de faixa ou ├ílbum -->
+                  <!-- Seletor rápido de faixa ou álbum -->
                   @if (album.tracks.length > 0) {
                     <div class="flex items-center gap-2">
                       <label class="text-[11px] text-gray-400 font-semibold whitespace-nowrap">Escolher:</label>
@@ -140,10 +140,10 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                         (ngModelChange)="onTrackDropdownChange($event)"
                         class="bg-[#101417] border border-[#2a343d] rounded px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500 max-w-[220px]"
                       >
-                        <option [ngValue]="0">­ƒÆ┐ ├ülbum Completo</option>
+                        <option [ngValue]="0">💿 Álbum Completo</option>
                         @for (track of album.tracks; track track.trackNumber) {
                           <option [ngValue]="track.trackNumber">
-                            ­ƒÄÁ {{ track.trackNumber }}. {{ track.title }} {{ getMyTrackReview(track.trackNumber) ? ' (Ôÿà ' + getMyTrackReview(track.trackNumber)!.rating + ')' : '' }}
+                            🎵 {{ track.trackNumber }}. {{ track.title }} {{ getMyTrackReview(track.trackNumber) ? ' (★ ' + getMyTrackReview(track.trackNumber)!.rating + ')' : '' }}
                           </option>
                         }
                       </select>
@@ -179,11 +179,11 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                       [disabled]="savingReview"
                       class="cursor-pointer disabled:cursor-not-allowed text-xs text-red-400 hover:text-red-300 hover:underline"
                     >
-                      Excluir minha review {{ selectedTrack ? 'desta m├║sica' : 'do ├ílbum' }}
+                      Excluir minha review {{ selectedTrack ? 'desta música' : 'do álbum' }}
                     </button>
                   } @else {
                     <span class="text-[11px] text-gray-500">
-                      Dica: voc├¬ tamb├®m pode clicar em qualquer m├║sica na lista abaixo para avali├í-la.
+                      Dica: você também pode clicar em qualquer música na lista abaixo para avaliá-la.
                     </span>
                   }
 
@@ -199,8 +199,8 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
               } @else {
                 <div class="flex items-center justify-between">
                   <div>
-                    <h3 class="text-sm font-semibold text-gray-200">Quer avaliar este ├ílbum ou suas m├║sicas?</h3>
-                    <p class="text-xs text-gray-400 mt-0.5">Fa├ºa login para dar sua nota ao disco ou avaliar faixas individuais.</p>
+                    <h3 class="text-sm font-semibold text-gray-200">Quer avaliar este álbum ou suas músicas?</h3>
+                    <p class="text-xs text-gray-400 mt-0.5">Faça login para dar sua nota ao disco ou avaliar faixas individuais.</p>
                   </div>
                   <a
                     routerLink="/login"
@@ -215,7 +215,7 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
           </div>
         </div>
 
-        <!-- Se├º├Áes: Faixas e Reviews -->
+        <!-- Seções: Faixas e Reviews -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-10">
           
           <!-- Faixas do Disco -->
@@ -230,12 +230,12 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                   (click)="selectTrack(null)"
                   class="cursor-pointer text-[11px] text-emerald-400 hover:underline font-semibold"
                 >
-                  Limpar sele├º├úo
+                  Limpar seleção
                 </button>
               }
             </div>
             <p class="text-[11px] text-gray-500 mb-3">
-              Clique em uma faixa para fazer um review individual ou ver suas avalia├º├Áes.
+              Clique em uma faixa para fazer um review individual ou ver suas avaliações.
             </p>
 
             @if (album.tracks.length > 0) {
@@ -269,16 +269,16 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                       @if (getMyTrackReview(track.trackNumber); as myTrkRev) {
                         <span
                           class="text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded"
-                          title="Sua nota para esta m├║sica"
+                          title="Sua nota para esta música"
                         >
-                          Ôÿà {{ myTrkRev.rating.toFixed(1) }}
+                          ★ {{ myTrkRev.rating.toFixed(1) }}
                         </span>
                       } @else if (getTrackAverageRating(track.trackNumber) !== null) {
                         <span
                           class="text-[10px] font-semibold bg-[#12161a] text-gray-400 px-1.5 py-0.5 rounded"
-                          title="M├®dia da comunidade para esta m├║sica"
+                          title="Média da comunidade para esta música"
                         >
-                          Ôÿà {{ getTrackAverageRating(track.trackNumber)!.toFixed(1) }}
+                          ★ {{ getTrackAverageRating(track.trackNumber)!.toFixed(1) }}
                         </span>
                       }
                       <span class="text-gray-500 text-[11px] font-mono">
@@ -289,7 +289,7 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                 }
               </div>
             } @else {
-              <p class="text-xs text-gray-500">Tracklist indispon├¡vel.</p>
+              <p class="text-xs text-gray-500">Tracklist indisponível.</p>
             }
           </div>
 
@@ -316,7 +316,7 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                   class="cursor-pointer text-[11px] font-bold px-2.5 py-1 rounded transition-colors"
                   [ngClass]="reviewFilter === 'album' ? 'bg-emerald-500 text-black' : 'bg-[#1b2228] text-gray-400 hover:text-white border border-[#2a343d]'"
                 >
-                  ├ülbum ({{ reviewsSummary?.reviews?.length || 0 }})
+                  Álbum ({{ reviewsSummary?.reviews?.length || 0 }})
                 </button>
                 <button
                   type="button"
@@ -324,7 +324,7 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                   class="cursor-pointer text-[11px] font-bold px-2.5 py-1 rounded transition-colors"
                   [ngClass]="reviewFilter === 'tracks' ? 'bg-emerald-500 text-black' : 'bg-[#1b2228] text-gray-400 hover:text-white border border-[#2a343d]'"
                 >
-                  M├║sicas ({{ reviewsSummary?.trackReviews?.length || 0 }})
+                  Músicas ({{ reviewsSummary?.trackReviews?.length || 0 }})
                 </button>
                 @if (selectedTrack) {
                   <button
@@ -353,14 +353,14 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                         </a>
                         @if (rev.trackNumber !== null) {
                           <span class="text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full">
-                            ­ƒÄÁ Faixa #{{ rev.trackNumber }} ÔÇó {{ rev.trackTitle }}
+                            🎵 Faixa #{{ rev.trackNumber }} • {{ rev.trackTitle }}
                           </span>
                         } @else {
                           <span class="text-[10px] font-semibold bg-[#12161a] text-gray-400 border border-[#242c34] px-2 py-0.5 rounded-full">
-                            ­ƒÆ┐ ├ülbum Completo
+                            💿 Álbum Completo
                           </span>
                         }
-                        <span class="text-[11px] text-gray-500">ÔÇó {{ formatDate(rev.createdAt) }}</span>
+                        <span class="text-[11px] text-gray-500">• {{ formatDate(rev.createdAt) }}</span>
                       </div>
                       <app-star-rating [rating]="rev.rating" [readonly]="true" />
                     </div>
@@ -376,11 +376,11 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
             } @else {
               <div class="text-center py-12 bg-[#1b2228] border border-[#2a343d] rounded-lg text-gray-500 text-xs">
                 @if (reviewFilter === 'selectedTrack' && selectedTrack) {
-                  Ainda n├úo h├í resenhas para a faixa "{{ selectedTrack.title }}". Seja o primeiro a avaliar!
+                  Ainda não há resenhas para a faixa "{{ selectedTrack.title }}". Seja o primeiro a avaliar!
                 } @else if (reviewFilter === 'tracks') {
-                  Ainda n├úo h├í resenhas individuais para m├║sicas deste ├ílbum. Clique em uma faixa ao lado para avaliar!
+                  Ainda não há resenhas individuais para músicas deste álbum. Clique em uma faixa ao lado para avaliar!
                 } @else {
-                  Ainda n├úo h├í resenhas para este ├ílbum. Seja o primeiro a avaliar!
+                  Ainda não há resenhas para este álbum. Seja o primeiro a avaliar!
                 }
               </div>
             }
@@ -390,7 +390,7 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
 
       } @else {
         <div class="text-center py-20 text-gray-400">
-          <p>├ülbum n├úo encontrado.</p>
+          <p>Álbum não encontrado.</p>
           <a routerLink="/catalog" class="text-emerald-400 text-xs font-semibold hover:underline mt-2 inline-block">
             Voltar para a busca
           </a>
