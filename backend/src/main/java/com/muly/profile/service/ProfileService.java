@@ -133,6 +133,7 @@ public class ProfileService {
         }
 
         topAlbumRepository.deleteByUserUsername(user.getUsername());
+        topAlbumRepository.flush();
 
         if (items != null) {
             for (TopAlbumItemRequest item : items) {
@@ -147,6 +148,7 @@ public class ProfileService {
 
                 topAlbumRepository.save(topAlbum);
             }
+            topAlbumRepository.flush();
         }
 
         return getProfile(username);
