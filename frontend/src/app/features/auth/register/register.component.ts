@@ -79,7 +79,7 @@ import { AuthService } from '../../../core/services/auth.service';
           <button
             type="submit"
             [disabled]="loading || !username || !email || !password"
-            class="w-full bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black font-bold py-2.5 rounded text-xs uppercase tracking-wider transition-colors mt-2"
+            class="cursor-pointer disabled:cursor-not-allowed w-full bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black font-bold py-2.5 rounded text-xs uppercase tracking-wider transition-colors mt-2"
           >
             {{ loading ? 'Criando conta...' : 'Cadastrar' }}
           </button>

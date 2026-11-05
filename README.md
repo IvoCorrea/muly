@@ -82,7 +82,7 @@ O **Muly** é uma plataforma focada em entusiastas e amantes de música que dese
 
 ### Frontend
 - **Angular (Standalone Components, Signals)**
-- **Tailwind CSS** (estilização moderna e responsiva no tema dark Letterboxd-style)
+- **Tailwind CSS** (estilização moderna e responsiva em tema dark)
 - **RxJS**
 - Sem bibliotecas pesadas de componentes (sem Angular Material).
 

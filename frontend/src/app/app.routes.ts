@@ -9,7 +9,7 @@ import { ProfileEditComponent } from './features/profile/profile-edit/profile-ed
 import { ProfileViewComponent } from './features/profile/profile-view/profile-view.component';
 
 export const routes: Routes = [
-  { path: '', component: HomeComponent, title: 'Muly | Letterboxd de Música' },
+  { path: '', component: HomeComponent, title: 'Muly | A rede social para quem ama música' },
   { path: 'login', component: LoginComponent, title: 'Entrar | Muly' },
   { path: 'register', component: RegisterComponent, title: 'Cadastrar | Muly' },
   { path: 'catalog', component: CatalogSearchComponent, title: 'Catálogo | Muly' },

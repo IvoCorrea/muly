@@ -29,7 +29,7 @@ import { AlbumCardComponent } from '../../../shared/components/album-card/album-
           <button
             type="submit"
             [disabled]="loading || !query.trim()"
-            class="bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black font-bold px-6 py-3 rounded-lg text-xs uppercase tracking-wider transition-colors"
+            class="cursor-pointer disabled:cursor-not-allowed bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black font-bold px-6 py-3 rounded-lg text-xs uppercase tracking-wider transition-colors"
           >
             {{ loading ? 'Buscando...' : 'Buscar' }}
           </button>
@@ -64,7 +64,7 @@ import { AlbumCardComponent } from '../../../shared/components/album-card/album-
               <button
                 type="button"
                 (click)="searchSuggestion(suggestion)"
-                class="text-xs bg-[#1b2228] hover:bg-[#252f38] text-gray-300 border border-[#2a343d] px-3 py-1.5 rounded-full transition-colors"
+                class="cursor-pointer text-xs bg-[#1b2228] hover:bg-[#252f38] text-gray-300 border border-[#2a343d] px-3 py-1.5 rounded-full transition-colors"
               >
                 {{ suggestion }}
               </button>

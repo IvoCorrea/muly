@@ -9,10 +9,10 @@ import { Component } from '@angular/core';
         <div class="flex items-center gap-2">
           <span class="w-4 h-4 rounded-full bg-emerald-500 inline-block"></span>
           <span class="font-bold text-gray-400 uppercase tracking-widest text-xs">Muly</span>
-          <span>• O Letterboxd para suas músicas favoritas</span>
+          <span>• A rede social para suas músicas favoritas</span>
         </div>
         <p class="text-[11px] text-gray-600">
-          Dados e metadados via Spotify Web API. Multi-user v1.0.
+          Dados e metadados via Spotify Web API. Multi-user v1.0.1.
         </p>
       </div>
     </footer>

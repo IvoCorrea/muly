@@ -20,7 +20,7 @@ import { AlbumCardComponent } from '../../shared/components/album-card/album-car
             A rede social para quem ama música
           </span>
           <h1 class="text-4xl sm:text-6xl font-black text-white tracking-tight leading-tight">
-            Catalogue o que você ouve. Compartilhe o que você sente."
+            Catalogue o que você ouve. Compartilhe o que você sente.
           </h1>
           <p class="text-sm sm:text-base text-gray-400 mt-4 leading-relaxed max-w-xl mx-auto">
             Registre suas audições, monte listas temáticas e descubra o que seus amigos andam ouvindo.
@@ -37,7 +37,7 @@ import { AlbumCardComponent } from '../../shared/components/album-card/album-car
             />
             <button
               type="submit"
-              class="bg-emerald-500 hover:bg-emerald-400 text-black font-bold px-6 py-3 rounded-lg text-xs uppercase tracking-wider transition-colors shadow-md"
+              class="cursor-pointer bg-emerald-500 hover:bg-emerald-400 text-black font-bold px-6 py-3 rounded-lg text-xs uppercase tracking-wider transition-colors shadow-md"
             >
               Buscar
             </button>

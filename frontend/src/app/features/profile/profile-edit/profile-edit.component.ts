@@ -66,7 +66,7 @@ interface TopSlot {
                 <button
                   type="button"
                   (click)="favoriteAlbum = null"
-                  class="text-xs text-red-400 hover:text-red-300 underline"
+                  class="cursor-pointer text-xs text-red-400 hover:text-red-300 underline"
                 >
                   Remover favorito
                 </button>
@@ -123,7 +123,7 @@ interface TopSlot {
                     <button
                       type="button"
                       (click)="slot.album = null"
-                      class="absolute top-1 right-1 bg-black/70 hover:bg-red-500 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center transition-colors"
+                      class="cursor-pointer absolute top-1 right-1 bg-black/70 hover:bg-red-500 text-white rounded-full w-5 h-5 text-[10px] flex items-center justify-center transition-colors"
                       title="Remover"
                     >
                       ✕
@@ -142,7 +142,7 @@ interface TopSlot {
                 <button
                   type="button"
                   (click)="openSlotSearch(slot.position)"
-                  class="w-full text-center text-[11px] font-bold uppercase tracking-wider py-1.5 px-2 rounded bg-[#202830] hover:bg-[#28323c] text-emerald-400 transition-colors"
+                  class="cursor-pointer w-full text-center text-[11px] font-bold uppercase tracking-wider py-1.5 px-2 rounded bg-[#202830] hover:bg-[#28323c] text-emerald-400 transition-colors"
                 >
                   {{ slot.album ? 'Trocar' : '+ Buscar' }}
                 </button>
@@ -160,7 +160,7 @@ interface TopSlot {
                 <button
                   type="button"
                   (click)="activeSearchSlot = null; slotSearchResults = []"
-                  class="text-xs text-gray-400 hover:text-white"
+                  class="cursor-pointer text-xs text-gray-400 hover:text-white"
                 >
                   ✕ Fechar
                 </button>
@@ -212,7 +212,7 @@ interface TopSlot {
             type="button"
             (click)="saveProfileChanges()"
             [disabled]="saving"
-            class="bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black font-black uppercase tracking-wider text-xs px-6 py-3 rounded-lg transition-colors shadow-lg"
+            class="cursor-pointer disabled:cursor-not-allowed bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black font-black uppercase tracking-wider text-xs px-6 py-3 rounded-lg transition-colors shadow-lg"
           >
             {{ saving ? 'Salvando...' : 'Salvar Alterações' }}
           </button>

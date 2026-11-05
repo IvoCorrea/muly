@@ -39,13 +39,6 @@ import { AuthService } from '../../../core/services/auth.service';
               >
                 Meu Perfil
               </a>
-              <a
-                routerLink="/profile/me/edit"
-                routerLinkActive="text-emerald-400"
-                class="hover:text-gray-100 transition-colors uppercase tracking-wider text-xs"
-              >
-                Customizar Perfil
-              </a>
             }
           </nav>
         </div>
@@ -72,7 +65,7 @@ import { AuthService } from '../../../core/services/auth.service';
               </span>
               <button
                 (click)="logout()"
-                class="text-xs font-semibold px-3 py-1.5 rounded bg-[#242c34] text-gray-300 hover:bg-red-500/20 hover:text-red-400 transition-colors uppercase tracking-wider"
+                class="cursor-pointer text-xs font-semibold px-3 py-1.5 rounded bg-[#242c34] text-gray-300 hover:bg-red-500/20 hover:text-red-400 transition-colors uppercase tracking-wider"
               >
                 Sair
               </button>

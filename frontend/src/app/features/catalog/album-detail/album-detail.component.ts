@@ -105,7 +105,7 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                       type="button"
                       (click)="deleteReview()"
                       [disabled]="savingReview"
-                      class="text-xs text-red-400 hover:text-red-300 hover:underline"
+                      class="cursor-pointer disabled:cursor-not-allowed text-xs text-red-400 hover:text-red-300 hover:underline"
                     >
                       Excluir minha review
                     </button>
@@ -117,7 +117,7 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                     type="button"
                     (click)="saveReview()"
                     [disabled]="savingReview || userRating === 0"
-                    class="bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black font-bold px-4 py-2 rounded text-xs uppercase tracking-wider transition-colors"
+                    class="cursor-pointer disabled:cursor-not-allowed bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black font-bold px-4 py-2 rounded text-xs uppercase tracking-wider transition-colors"
                   >
                     {{ savingReview ? 'Salvando...' : (myReview ? 'Atualizar Review' : 'Publicar Review') }}
                   </button>
