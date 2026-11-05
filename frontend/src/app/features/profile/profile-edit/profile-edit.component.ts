@@ -82,19 +82,31 @@ interface TopSlot {
                   class="w-full bg-[#12161a] border border-[#242c34] rounded px-3 py-2 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-emerald-500"
                 />
 
-                @if (favSearchResults.length > 0) {
-                  <div class="bg-[#12161a] border border-[#2a343d] rounded mt-1 max-h-48 overflow-y-auto divide-y divide-[#242c34]">
-                    @for (res of favSearchResults; track res.externalId) {
-                      <div
-                        (click)="selectFavorite(res)"
-                        class="p-2 flex items-center gap-3 cursor-pointer hover:bg-[#202830] transition-colors"
-                      >
-                        <img [src]="res.coverUrl" class="w-8 h-8 rounded object-cover" />
-                        <div class="truncate text-xs">
-                          <span class="font-semibold text-gray-200">{{ res.title }}</span>
-                          <span class="text-gray-400 ml-1">por {{ res.artist }}</span>
+                @if (searchingFav || favSearchResults.length > 0) {
+                  <div class="animate-dropdown bg-[#12161a] border border-[#2a343d] rounded mt-1 max-h-48 overflow-y-auto divide-y divide-[#242c34] shadow-xl">
+                    @if (searchingFav && favSearchResults.length === 0) {
+                      @for (s of [1, 2, 3]; track s) {
+                        <div class="p-2 flex items-center gap-3">
+                          <div class="w-8 h-8 rounded skeleton-shimmer shrink-0"></div>
+                          <div class="flex-1 space-y-1.5">
+                            <div class="h-3 w-3/5 rounded skeleton-shimmer"></div>
+                            <div class="h-2.5 w-2/5 rounded skeleton-shimmer"></div>
+                          </div>
                         </div>
-                      </div>
+                      }
+                    } @else {
+                      @for (res of favSearchResults; track res.externalId) {
+                        <div
+                          (click)="selectFavorite(res)"
+                          class="animate-search-item p-2 flex items-center gap-3 cursor-pointer hover:bg-[#202830] transition-colors"
+                        >
+                          <img [src]="res.coverUrl" class="w-8 h-8 rounded object-cover" />
+                          <div class="truncate text-xs">
+                            <span class="font-semibold text-gray-200">{{ res.title }}</span>
+                            <span class="text-gray-400 ml-1">por {{ res.artist }}</span>
+                          </div>
+                        </div>
+                      }
                     }
                   </div>
                 }
@@ -184,31 +196,46 @@ interface TopSlot {
                   class="w-full bg-[#12161a] border border-[#242c34] rounded px-3 py-2 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-emerald-500"
                 />
 
-                @if (trackSearchResults.length > 0) {
-                  <div class="bg-[#12161a] border border-[#2a343d] rounded mt-1 max-h-56 overflow-y-auto divide-y divide-[#242c34]">
-                    @for (trk of trackSearchResults; track trk.title + trk.artist + trk.albumTitle) {
-                      <div
-                        (click)="selectCurrentTrack(trk)"
-                        class="p-2.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-[#202830] transition-colors"
-                      >
-                        <div class="flex items-center gap-3 truncate">
-                          @if (trk.coverUrl) {
-                            <img [src]="trk.coverUrl" class="w-9 h-9 rounded object-cover shrink-0" />
-                          }
-                          <div class="truncate text-xs">
-                            <p class="font-semibold text-gray-200 truncate">{{ trk.title }}</p>
-                            <p class="text-[11px] text-gray-400 truncate">
-                              {{ trk.artist }}
-                              @if (trk.albumTitle) {
-                                <span class="text-gray-500">• {{ trk.albumTitle }}</span>
-                              }
-                            </p>
+                @if (searchingTrack || trackSearchResults.length > 0) {
+                  <div class="animate-dropdown bg-[#12161a] border border-[#2a343d] rounded mt-1 max-h-56 overflow-y-auto divide-y divide-[#242c34] shadow-xl">
+                    @if (searchingTrack && trackSearchResults.length === 0) {
+                      @for (s of [1, 2, 3]; track s) {
+                        <div class="p-2.5 flex items-center justify-between gap-3">
+                          <div class="flex items-center gap-3 flex-1">
+                            <div class="w-9 h-9 rounded skeleton-shimmer shrink-0"></div>
+                            <div class="flex-1 space-y-1.5">
+                              <div class="h-3 w-3/5 rounded skeleton-shimmer"></div>
+                              <div class="h-2.5 w-2/5 rounded skeleton-shimmer"></div>
+                            </div>
                           </div>
+                          <div class="w-16 h-5 rounded skeleton-shimmer shrink-0"></div>
                         </div>
-                        <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 rounded shrink-0">
-                          Selecionar
-                        </span>
-                      </div>
+                      }
+                    } @else {
+                      @for (trk of trackSearchResults; track trk.title + trk.artist + trk.albumTitle) {
+                        <div
+                          (click)="selectCurrentTrack(trk)"
+                          class="animate-search-item p-2.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-[#202830] transition-colors"
+                        >
+                          <div class="flex items-center gap-3 truncate">
+                            @if (trk.coverUrl) {
+                              <img [src]="trk.coverUrl" class="w-9 h-9 rounded object-cover shrink-0" />
+                            }
+                            <div class="truncate text-xs">
+                              <p class="font-semibold text-gray-200 truncate">{{ trk.title }}</p>
+                              <p class="text-[11px] text-gray-400 truncate">
+                                {{ trk.artist }}
+                                @if (trk.albumTitle) {
+                                  <span class="text-gray-500">• {{ trk.albumTitle }}</span>
+                                }
+                              </p>
+                            </div>
+                          </div>
+                          <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 rounded shrink-0">
+                            Selecionar
+                          </span>
+                        </div>
+                      }
                     }
                   </div>
                 }
@@ -266,14 +293,14 @@ interface TopSlot {
 
           <!-- Modal de Busca de Slot -->
           @if (activeSearchSlot !== null) {
-            <div class="mt-6 p-4 bg-[#14181c] border border-emerald-500/30 rounded-lg">
+            <div class="animate-dropdown mt-6 p-4 bg-[#14181c] border border-emerald-500/30 rounded-lg">
               <div class="flex items-center justify-between mb-3">
                 <span class="text-xs font-bold text-gray-200">
                   Buscando álbum para a posição {{ activeSearchSlot }}
                 </span>
                 <button
                   type="button"
-                  (click)="activeSearchSlot = null; slotSearchResults = []"
+                  (click)="activeSearchSlot = null; slotSearchResults = []; searchingSlot = false"
                   class="cursor-pointer text-xs text-gray-400 hover:text-white"
                 >
                   ✕ Fechar
@@ -288,19 +315,31 @@ interface TopSlot {
                 class="w-full bg-[#1b2228] border border-[#2a343d] rounded px-3 py-2 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-emerald-500"
               />
 
-              @if (slotSearchResults.length > 0) {
-                <div class="mt-2 max-h-48 overflow-y-auto divide-y divide-[#242c34] bg-[#1b2228] border border-[#2a343d] rounded">
-                  @for (res of slotSearchResults; track res.externalId) {
-                    <div
-                      (click)="selectSlotAlbum(res)"
-                      class="p-2 flex items-center gap-3 cursor-pointer hover:bg-[#202830] transition-colors"
-                    >
-                      <img [src]="res.coverUrl" class="w-8 h-8 rounded object-cover" />
-                      <div class="truncate text-xs">
-                        <span class="font-semibold text-gray-200">{{ res.title }}</span>
-                        <span class="text-gray-400 ml-1">por {{ res.artist }}</span>
+              @if (searchingSlot || slotSearchResults.length > 0) {
+                <div class="animate-dropdown mt-2 max-h-48 overflow-y-auto divide-y divide-[#242c34] bg-[#1b2228] border border-[#2a343d] rounded shadow-xl">
+                  @if (searchingSlot && slotSearchResults.length === 0) {
+                    @for (s of [1, 2, 3]; track s) {
+                      <div class="p-2 flex items-center gap-3">
+                        <div class="w-8 h-8 rounded skeleton-shimmer shrink-0"></div>
+                        <div class="flex-1 space-y-1.5">
+                          <div class="h-3 w-3/5 rounded skeleton-shimmer"></div>
+                          <div class="h-2.5 w-2/5 rounded skeleton-shimmer"></div>
+                        </div>
                       </div>
-                    </div>
+                    }
+                  } @else {
+                    @for (res of slotSearchResults; track res.externalId) {
+                      <div
+                        (click)="selectSlotAlbum(res)"
+                        class="animate-search-item p-2 flex items-center gap-3 cursor-pointer hover:bg-[#202830] transition-colors"
+                      >
+                        <img [src]="res.coverUrl" class="w-8 h-8 rounded object-cover" />
+                        <div class="truncate text-xs">
+                          <span class="font-semibold text-gray-200">{{ res.title }}</span>
+                          <span class="text-gray-400 ml-1">por {{ res.artist }}</span>
+                        </div>
+                      </div>
+                    }
                   }
                 </div>
               }
@@ -351,10 +390,12 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
   favoriteAlbum: AlbumResponse | null = null;
   favSearchQuery = '';
   favSearchResults: AlbumResponse[] = [];
+  searchingFav = false;
 
   currentTrack: CurrentTrackResponse | null = null;
   trackSearchQuery = '';
   trackSearchResults: TrackSearchResponse[] = [];
+  searchingTrack = false;
 
   private previewAudio: HTMLAudioElement | null = null;
   isPlayingPreview = false;
@@ -369,6 +410,7 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
   activeSearchSlot: number | null = null;
   slotQuery = '';
   slotSearchResults: AlbumResponse[] = [];
+  searchingSlot = false;
 
   ngOnInit(): void {
     this.profileService.getMyProfile().subscribe({
@@ -397,12 +439,24 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
   }
 
   onSearchFav(): void {
-    if (this.favSearchQuery.trim().length > 1) {
-      this.catalogService.search(this.favSearchQuery.trim()).subscribe({
-        next: (res) => (this.favSearchResults = res)
+    const q = this.favSearchQuery.trim();
+    if (q.length > 1) {
+      this.searchingFav = true;
+      this.catalogService.search(q).subscribe({
+        next: (res) => {
+          if (this.favSearchQuery.trim() === q) {
+            this.favSearchResults = res;
+            this.searchingFav = false;
+          }
+        },
+        error: () => {
+          this.favSearchResults = [];
+          this.searchingFav = false;
+        }
       });
     } else {
       this.favSearchResults = [];
+      this.searchingFav = false;
     }
   }
 
@@ -410,15 +464,28 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
     this.favoriteAlbum = album;
     this.favSearchQuery = '';
     this.favSearchResults = [];
+    this.searchingFav = false;
   }
 
   onSearchTrack(): void {
-    if (this.trackSearchQuery.trim().length > 1) {
-      this.catalogService.searchTracks(this.trackSearchQuery.trim()).subscribe({
-        next: (res) => (this.trackSearchResults = res)
+    const q = this.trackSearchQuery.trim();
+    if (q.length > 1) {
+      this.searchingTrack = true;
+      this.catalogService.searchTracks(q).subscribe({
+        next: (res) => {
+          if (this.trackSearchQuery.trim() === q) {
+            this.trackSearchResults = res;
+            this.searchingTrack = false;
+          }
+        },
+        error: () => {
+          this.trackSearchResults = [];
+          this.searchingTrack = false;
+        }
       });
     } else {
       this.trackSearchResults = [];
+      this.searchingTrack = false;
     }
   }
 
@@ -433,6 +500,7 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
     };
     this.trackSearchQuery = '';
     this.trackSearchResults = [];
+    this.searchingTrack = false;
   }
 
   removeCurrentTrack(): void {
@@ -477,15 +545,28 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
     this.activeSearchSlot = position;
     this.slotQuery = '';
     this.slotSearchResults = [];
+    this.searchingSlot = false;
   }
 
   onSearchSlot(): void {
-    if (this.slotQuery.trim().length > 1) {
-      this.catalogService.search(this.slotQuery.trim()).subscribe({
-        next: (res) => (this.slotSearchResults = res)
+    const q = this.slotQuery.trim();
+    if (q.length > 1) {
+      this.searchingSlot = true;
+      this.catalogService.search(q).subscribe({
+        next: (res) => {
+          if (this.slotQuery.trim() === q) {
+            this.slotSearchResults = res;
+            this.searchingSlot = false;
+          }
+        },
+        error: () => {
+          this.slotSearchResults = [];
+          this.searchingSlot = false;
+        }
       });
     } else {
       this.slotSearchResults = [];
+      this.searchingSlot = false;
     }
   }
 
@@ -498,6 +579,7 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
       this.activeSearchSlot = null;
       this.slotQuery = '';
       this.slotSearchResults = [];
+      this.searchingSlot = false;
     }
   }
 
