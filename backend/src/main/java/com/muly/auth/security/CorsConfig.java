@@ -22,7 +22,12 @@ public class CorsConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
-        config.addAllowedOrigin(frontendUrl);
+        for (String origin : frontendUrl.split(",")) {
+            String cleaned = origin.trim().replaceAll("/+$", "");
+            if (!cleaned.isEmpty()) {
+                config.addAllowedOrigin(cleaned);
+            }
+        }
         config.addAllowedMethod(HttpMethod.GET);
         config.addAllowedMethod(HttpMethod.PUT);
         config.addAllowedMethod(HttpMethod.DELETE);
