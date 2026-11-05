@@ -14,10 +14,12 @@ import { AuthService } from '../../../core/services/auth.service';
         
         <!-- Logo e Links -->
         <div class="flex items-center gap-8">
-          <a routerLink="/" class="flex items-center gap-2 group">
-            <span class="w-7 h-7 rounded-full bg-emerald-500 flex items-center justify-center text-black font-black text-xs tracking-tighter">
-              M
-            </span>
+          <a routerLink="/" class="flex items-center gap-2.5 group">
+            <img
+              src="/logo-circle.png"
+              alt="Muly Logo"
+              class="w-8 h-8 rounded-full object-contain group-hover:scale-105 transition-transform"
+            />
             <span class="text-xl font-black text-gray-100 tracking-wider group-hover:text-emerald-400 transition-colors uppercase">
               Muly
             </span>
