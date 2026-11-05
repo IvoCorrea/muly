@@ -3,6 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
+  SetCurrentTrackRequest,
   SetFavoriteAlbumRequest,
   UpdateTopAlbumsRequest,
   UserProfileResponse
@@ -25,6 +26,10 @@ export class ProfileService {
   public setFavoriteAlbum(spotifyId: string | null): Observable<UserProfileResponse> {
     const payload: SetFavoriteAlbumRequest = { spotifyId };
     return this.http.put<UserProfileResponse>(`${environment.apiUrl}/profile/me/favorite-album`, payload);
+  }
+
+  public setCurrentTrack(request: SetCurrentTrackRequest): Observable<UserProfileResponse> {
+    return this.http.put<UserProfileResponse>(`${environment.apiUrl}/profile/me/current-track`, request);
   }
 
   public updateTopAlbums(request: UpdateTopAlbumsRequest): Observable<UserProfileResponse> {

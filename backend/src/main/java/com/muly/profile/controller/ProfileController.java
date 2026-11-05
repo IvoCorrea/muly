@@ -1,5 +1,6 @@
 package com.muly.profile.controller;
 
+import com.muly.profile.dto.SetCurrentTrackRequest;
 import com.muly.profile.dto.SetFavoriteAlbumRequest;
 import com.muly.profile.dto.UpdateTopAlbumsRequest;
 import com.muly.profile.dto.UserProfileResponse;
@@ -32,6 +33,15 @@ public class ProfileController {
             Principal principal
     ) {
         UserProfileResponse response = profileService.setFavoriteAlbum(principal.getName(), request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/me/current-track")
+    public ResponseEntity<UserProfileResponse> setCurrentTrack(
+            @Valid @RequestBody SetCurrentTrackRequest request,
+            Principal principal
+    ) {
+        UserProfileResponse response = profileService.setCurrentTrack(principal.getName(), request);
         return ResponseEntity.ok(response);
     }
 

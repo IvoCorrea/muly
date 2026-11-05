@@ -3,6 +3,7 @@ package com.muly.catalog.service;
 import com.muly.catalog.dto.AlbumDetailResponse;
 import com.muly.catalog.dto.AlbumResponse;
 import com.muly.catalog.dto.AlbumTrackResponse;
+import com.muly.catalog.dto.TrackSearchResponse;
 import com.muly.catalog.model.Album;
 import com.muly.catalog.repository.AlbumRepository;
 import com.muly.common.exception.ResourceNotFoundException;
@@ -32,6 +33,10 @@ public class CatalogService {
             Optional<Album> existing = albumRepository.findByExternalId(result.externalId());
             return existing.map(this::toResponse).orElse(result);
         }).toList();
+    }
+
+    public List<TrackSearchResponse> searchTracks(String query) {
+        return spotifyService.searchTracksWithPreview(query);
     }
 
     @Transactional

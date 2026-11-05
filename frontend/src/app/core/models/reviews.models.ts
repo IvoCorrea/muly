@@ -6,6 +6,8 @@ export interface ReviewResponse {
   albumArtist: string;
   albumCoverUrl: string | null;
   albumReleaseYear: number | null;
+  trackNumber: number | null;
+  trackTitle: string | null;
   rating: number;
   reviewText: string | null;
   createdAt: string;
@@ -16,10 +18,13 @@ export interface AlbumReviewsSummaryResponse {
   averageRating: number | null;
   totalReviews: number;
   reviews: ReviewResponse[];
+  trackReviews: ReviewResponse[];
 }
 
 export interface CreateReviewRequest {
   spotifyId: string;
+  trackNumber?: number | null;
+  trackTitle?: string | null;
   rating: number;
   reviewText?: string;
 }

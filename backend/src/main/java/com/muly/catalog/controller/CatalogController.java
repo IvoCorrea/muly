@@ -2,6 +2,7 @@ package com.muly.catalog.controller;
 
 import com.muly.catalog.dto.AlbumDetailResponse;
 import com.muly.catalog.dto.AlbumResponse;
+import com.muly.catalog.dto.TrackSearchResponse;
 import com.muly.catalog.service.CatalogService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +22,12 @@ public class CatalogController {
     @GetMapping("/search")
     public ResponseEntity<List<AlbumResponse>> search(@RequestParam(value = "q", defaultValue = "") String query) {
         List<AlbumResponse> results = catalogService.searchAlbums(query);
+        return ResponseEntity.ok(results);
+    }
+
+    @GetMapping("/tracks/search")
+    public ResponseEntity<List<TrackSearchResponse>> searchTracks(@RequestParam(value = "q", defaultValue = "") String query) {
+        List<TrackSearchResponse> results = catalogService.searchTracks(query);
         return ResponseEntity.ok(results);
     }
 

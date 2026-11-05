@@ -75,4 +75,13 @@ public class ReviewController {
         }
         return ResponseEntity.ok(response);
     }
+
+    @GetMapping("/me/album/{externalId}/tracks")
+    public ResponseEntity<List<ReviewResponse>> getMyTrackReviewsForAlbum(
+            @PathVariable String externalId,
+            Principal principal
+    ) {
+        List<ReviewResponse> response = reviewService.getUserTrackReviewsForAlbum(principal.getName(), externalId);
+        return ResponseEntity.ok(response);
+    }
 }

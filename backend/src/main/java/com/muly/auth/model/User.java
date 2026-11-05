@@ -35,6 +35,21 @@ public class User implements UserDetails {
     @Column(name = "favorite_album_id")
     private UUID favoriteAlbumId;
 
+    @Column(name = "current_track_title", length = 255)
+    private String currentTrackTitle;
+
+    @Column(name = "current_track_artist", length = 255)
+    private String currentTrackArtist;
+
+    @Column(name = "current_track_album", length = 255)
+    private String currentTrackAlbum;
+
+    @Column(name = "current_track_cover_url", length = 1024)
+    private String currentTrackCoverUrl;
+
+    @Column(name = "current_track_preview_url", length = 1024)
+    private String currentTrackPreviewUrl;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -42,7 +57,6 @@ public class User implements UserDetails {
     protected void onCreate() {
         createdAt = Instant.now();
     }
-
 
     @Override
     @NonNull

@@ -11,6 +11,8 @@ public record ReviewResponse(
         String albumArtist,
         String albumCoverUrl,
         Integer albumReleaseYear,
+        Integer trackNumber,
+        String trackTitle,
         Double rating,
         String reviewText,
         Instant createdAt,

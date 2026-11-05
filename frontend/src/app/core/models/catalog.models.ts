@@ -22,3 +22,11 @@ export interface AlbumDetailResponse {
   coverUrl: string | null;
   tracks: AlbumTrackResponse[];
 }
+
+export interface TrackSearchResponse {
+  title: string;
+  artist: string;
+  albumTitle: string;
+  coverUrl: string | null;
+  previewUrl: string | null;
+}

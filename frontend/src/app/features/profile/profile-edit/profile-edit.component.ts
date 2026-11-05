@@ -1,9 +1,9 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { AlbumResponse } from '../../../core/models/catalog.models';
-import { TopAlbumItemRequest, UserProfileResponse } from '../../../core/models/profile.models';
+import { AlbumResponse, TrackSearchResponse } from '../../../core/models/catalog.models';
+import { CurrentTrackResponse, TopAlbumItemRequest, UserProfileResponse } from '../../../core/models/profile.models';
 import { CatalogService } from '../../../core/services/catalog.service';
 import { ProfileService } from '../../../core/services/profile.service';
 
@@ -22,7 +22,7 @@ interface TopSlot {
       <div class="flex items-center justify-between mb-8 pb-4 border-b border-[#242c34]">
         <div>
           <h1 class="text-2xl font-black text-white uppercase tracking-wider">Customizar Perfil</h1>
-          <p class="text-xs text-gray-400 mt-1">Escolha seu álbum favorito de todos os tempos e sua lista de Top 4.</p>
+          <p class="text-xs text-gray-400 mt-1">Escolha seu álbum favorito, a música que você mais está curtindo agora e seu Top 4.</p>
         </div>
         <a
           [routerLink]="['/profile', currentUsername]"
@@ -103,10 +103,124 @@ interface TopSlot {
           </div>
         </div>
 
-        <!-- SEÇÃO 2: Top 4 Álbuns -->
+        <!-- SEÇÃO 2: Música do Momento (Com Player) -->
+        <div class="bg-[#1b2228] border border-[#2a343d] rounded-xl p-6 mb-8">
+          <div class="flex items-center justify-between mb-1">
+            <h2 class="text-xs font-black uppercase tracking-widest text-emerald-400">
+              2. Música do Momento (Com Play no Perfil)
+            </h2>
+            <span class="text-[10px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+              Novo • Preview de Áudio
+            </span>
+          </div>
+          <p class="text-xs text-gray-400 mb-4">
+            Escolha a música que você mais está gostando atualmente para deixar com botão de Play no seu perfil.
+          </p>
+
+          <div class="flex flex-col sm:flex-row items-center gap-6">
+            <div class="w-28 h-28 rounded-lg bg-[#12161a] border border-[#2a343d] overflow-hidden flex items-center justify-center shrink-0 relative">
+              @if (currentTrack && currentTrack.coverUrl) {
+                <img [src]="currentTrack.coverUrl" [alt]="currentTrack.title" class="w-full h-full object-cover" />
+                @if (currentTrack.previewUrl) {
+                  <button
+                    type="button"
+                    (click)="togglePreview(currentTrack.previewUrl)"
+                    class="cursor-pointer absolute inset-0 bg-black/50 hover:bg-black/60 flex items-center justify-center transition-colors"
+                    title="Testar Play/Pause"
+                  >
+                    <span class="w-10 h-10 rounded-full bg-emerald-500 text-black flex items-center justify-center font-black text-sm shadow-lg">
+                      {{ isPlayingPreview ? '❚❚' : '▶' }}
+                    </span>
+                  </button>
+                }
+              } @else {
+                <span class="text-xs text-gray-600 text-center px-2">Nenhuma música</span>
+              }
+            </div>
+
+            <div class="flex-1 w-full">
+              @if (currentTrack) {
+                <div class="mb-3 flex flex-wrap items-center justify-between gap-2 bg-[#12161a] border border-[#242c34] rounded-lg p-3">
+                  <div class="truncate">
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-400 block">
+                      🎧 Curtindo agora
+                    </span>
+                    <h3 class="font-bold text-white text-sm truncate">{{ currentTrack.title }}</h3>
+                    <p class="text-xs text-gray-400 truncate">
+                      {{ currentTrack.artist }}
+                      @if (currentTrack.albumTitle) {
+                        <span>• {{ currentTrack.albumTitle }}</span>
+                      }
+                    </p>
+                  </div>
+                  <div class="flex items-center gap-3 shrink-0">
+                    @if (currentTrack.previewUrl) {
+                      <button
+                        type="button"
+                        (click)="togglePreview(currentTrack.previewUrl)"
+                        class="cursor-pointer text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-black px-3 py-1.5 rounded-full transition-colors"
+                      >
+                        {{ isPlayingPreview ? '❚❚ Pausar' : '▶ Ouvir Preview' }}
+                      </button>
+                    }
+                    <button
+                      type="button"
+                      (click)="removeCurrentTrack()"
+                      class="cursor-pointer text-xs text-red-400 hover:text-red-300 underline"
+                    >
+                      Remover
+                    </button>
+                  </div>
+                </div>
+              }
+
+              <!-- Busca de Música do Momento -->
+              <div class="mt-2">
+                <input
+                  type="text"
+                  [(ngModel)]="trackSearchQuery"
+                  (input)="onSearchTrack()"
+                  placeholder="Digite o nome da música ou artista (ex: Creep Radiohead, Daechwita, Daft Punk)..."
+                  class="w-full bg-[#12161a] border border-[#242c34] rounded px-3 py-2 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-emerald-500"
+                />
+
+                @if (trackSearchResults.length > 0) {
+                  <div class="bg-[#12161a] border border-[#2a343d] rounded mt-1 max-h-56 overflow-y-auto divide-y divide-[#242c34]">
+                    @for (trk of trackSearchResults; track trk.title + trk.artist + trk.albumTitle) {
+                      <div
+                        (click)="selectCurrentTrack(trk)"
+                        class="p-2.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-[#202830] transition-colors"
+                      >
+                        <div class="flex items-center gap-3 truncate">
+                          @if (trk.coverUrl) {
+                            <img [src]="trk.coverUrl" class="w-9 h-9 rounded object-cover shrink-0" />
+                          }
+                          <div class="truncate text-xs">
+                            <p class="font-semibold text-gray-200 truncate">{{ trk.title }}</p>
+                            <p class="text-[11px] text-gray-400 truncate">
+                              {{ trk.artist }}
+                              @if (trk.albumTitle) {
+                                <span class="text-gray-500">• {{ trk.albumTitle }}</span>
+                              }
+                            </p>
+                          </div>
+                        </div>
+                        <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 rounded shrink-0">
+                          Selecionar
+                        </span>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SEÇÃO 3: Top 4 Álbuns -->
         <div class="bg-[#1b2228] border border-[#2a343d] rounded-xl p-6 mb-8">
           <h2 class="text-xs font-black uppercase tracking-widest text-emerald-400 mb-1">
-            2. Seus 4 Álbuns do Topo
+            3. Seus 4 Álbuns do Topo
           </h2>
           <p class="text-xs text-gray-400 mb-6">Escolha quatro álbuns fundamentais para exibir em destaque.</p>
 
@@ -223,7 +337,7 @@ interface TopSlot {
     </div>
   `
 })
-export class ProfileEditComponent implements OnInit {
+export class ProfileEditComponent implements OnInit, OnDestroy {
   private profileService = inject(ProfileService);
   private catalogService = inject(CatalogService);
   private router = inject(Router);
@@ -237,6 +351,13 @@ export class ProfileEditComponent implements OnInit {
   favoriteAlbum: AlbumResponse | null = null;
   favSearchQuery = '';
   favSearchResults: AlbumResponse[] = [];
+
+  currentTrack: CurrentTrackResponse | null = null;
+  trackSearchQuery = '';
+  trackSearchResults: TrackSearchResponse[] = [];
+
+  private previewAudio: HTMLAudioElement | null = null;
+  isPlayingPreview = false;
 
   topSlots: TopSlot[] = [
     { position: 1, album: null },
@@ -254,6 +375,7 @@ export class ProfileEditComponent implements OnInit {
       next: (profile: UserProfileResponse) => {
         this.currentUsername = profile.username;
         this.favoriteAlbum = profile.favoriteAlbum;
+        this.currentTrack = profile.currentTrack || null;
         if (profile.topAlbums) {
           profile.topAlbums.forEach(item => {
             const slot = this.topSlots.find(s => s.position === item.position);
@@ -270,6 +392,10 @@ export class ProfileEditComponent implements OnInit {
     });
   }
 
+  ngOnDestroy(): void {
+    this.stopPreview();
+  }
+
   onSearchFav(): void {
     if (this.favSearchQuery.trim().length > 1) {
       this.catalogService.search(this.favSearchQuery.trim()).subscribe({
@@ -284,6 +410,67 @@ export class ProfileEditComponent implements OnInit {
     this.favoriteAlbum = album;
     this.favSearchQuery = '';
     this.favSearchResults = [];
+  }
+
+  onSearchTrack(): void {
+    if (this.trackSearchQuery.trim().length > 1) {
+      this.catalogService.searchTracks(this.trackSearchQuery.trim()).subscribe({
+        next: (res) => (this.trackSearchResults = res)
+      });
+    } else {
+      this.trackSearchResults = [];
+    }
+  }
+
+  selectCurrentTrack(track: TrackSearchResponse): void {
+    this.stopPreview();
+    this.currentTrack = {
+      title: track.title,
+      artist: track.artist,
+      albumTitle: track.albumTitle,
+      coverUrl: track.coverUrl,
+      previewUrl: track.previewUrl
+    };
+    this.trackSearchQuery = '';
+    this.trackSearchResults = [];
+  }
+
+  removeCurrentTrack(): void {
+    this.stopPreview();
+    this.currentTrack = null;
+  }
+
+  togglePreview(previewUrl: string | null): void {
+    if (!previewUrl) return;
+
+    if (this.isPlayingPreview && this.previewAudio) {
+      this.stopPreview();
+      return;
+    }
+
+    this.stopPreview();
+    this.previewAudio = new Audio(previewUrl);
+    this.previewAudio.volume = 0.7;
+    this.previewAudio.onended = () => {
+      this.isPlayingPreview = false;
+    };
+    this.previewAudio.onerror = () => {
+      this.isPlayingPreview = false;
+    };
+    this.previewAudio.play().then(() => {
+      this.isPlayingPreview = true;
+    }).catch(() => {
+      this.isPlayingPreview = false;
+    });
+  }
+
+  private stopPreview(): void {
+    if (this.previewAudio) {
+      this.previewAudio.pause();
+      this.previewAudio.currentTime = 0;
+      this.previewAudio = null;
+    }
+    this.isPlayingPreview = false;
   }
 
   openSlotSearch(position: number): void {
@@ -315,6 +502,7 @@ export class ProfileEditComponent implements OnInit {
   }
 
   saveProfileChanges(): void {
+    this.stopPreview();
     this.saving = true;
     this.successMessage = '';
     this.errorMessage = '';
@@ -323,25 +511,44 @@ export class ProfileEditComponent implements OnInit {
     const favSpotifyId = this.favoriteAlbum ? this.favoriteAlbum.externalId : null;
     this.profileService.setFavoriteAlbum(favSpotifyId).subscribe({
       next: () => {
-        // 2. Atualizar Top Álbuns
-        const topItems: TopAlbumItemRequest[] = this.topSlots
-          .filter(s => s.album !== null)
-          .map(s => ({
-            position: s.position,
-            spotifyId: s.album!.externalId
-          }));
+        // 2. Atualizar Música do Momento
+        const trackPayload = this.currentTrack
+          ? {
+              title: this.currentTrack.title,
+              artist: this.currentTrack.artist,
+              albumTitle: this.currentTrack.albumTitle,
+              coverUrl: this.currentTrack.coverUrl,
+              previewUrl: this.currentTrack.previewUrl
+            }
+          : { title: null };
 
-        this.profileService.updateTopAlbums({ topAlbums: topItems }).subscribe({
+        this.profileService.setCurrentTrack(trackPayload).subscribe({
           next: () => {
-            this.saving = false;
-            this.successMessage = 'Perfil atualizado com sucesso!';
-            setTimeout(() => {
-              this.router.navigate(['/profile', this.currentUsername]);
-            }, 1000);
+            // 3. Atualizar Top Álbuns
+            const topItems: TopAlbumItemRequest[] = this.topSlots
+              .filter(s => s.album !== null)
+              .map(s => ({
+                position: s.position,
+                spotifyId: s.album!.externalId
+              }));
+
+            this.profileService.updateTopAlbums({ topAlbums: topItems }).subscribe({
+              next: () => {
+                this.saving = false;
+                this.successMessage = 'Perfil atualizado com sucesso!';
+                setTimeout(() => {
+                  this.router.navigate(['/profile', this.currentUsername]);
+                }, 1000);
+              },
+              error: (err) => {
+                this.saving = false;
+                this.errorMessage = err.error?.message || 'Erro ao atualizar Top Álbuns.';
+              }
+            });
           },
           error: (err) => {
             this.saving = false;
-            this.errorMessage = err.error?.message || 'Erro ao atualizar Top Álbuns.';
+            this.errorMessage = err.error?.message || 'Erro ao atualizar Música do Momento.';
           }
         });
       },

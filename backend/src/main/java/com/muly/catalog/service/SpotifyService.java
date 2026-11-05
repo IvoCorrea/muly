@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.muly.catalog.dto.AlbumDetailResponse;
 import com.muly.catalog.dto.AlbumResponse;
 import com.muly.catalog.dto.AlbumTrackResponse;
+import com.muly.catalog.dto.TrackSearchResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
@@ -185,5 +186,74 @@ public class SpotifyService {
             return images.get(0).path("url").asText(null);
         }
         return null;
+    }
+
+    public List<TrackSearchResponse> searchTracksWithPreview(String query) {
+        if (query == null || query.isBlank()) {
+            return Collections.emptyList();
+        }
+
+        // 1. Try public iTunes Search API (no token required, permanent previewUrl)
+        try {
+            String responseBody = restClient.get()
+                    .uri("https://itunes.apple.com/search?term={query}&media=music&entity=song&limit=8", query.trim())
+                    .retrieve()
+                    .body(String.class);
+
+            JsonNode root = objectMapper.readTree(responseBody);
+            JsonNode results = root.path("results");
+            if (results.isArray() && !results.isEmpty()) {
+                List<TrackSearchResponse> tracks = new ArrayList<>();
+                for (JsonNode item : results) {
+                    String previewUrl = item.path("previewUrl").asText(null);
+                    if (previewUrl == null || previewUrl.isBlank()) continue;
+
+                    String title = item.path("trackName").asText("");
+                    String artist = item.path("artistName").asText("");
+                    String albumTitle = item.path("collectionName").asText("");
+                    String coverUrl = item.path("artworkUrl100").asText(null);
+                    if (coverUrl != null) {
+                        coverUrl = coverUrl.replace("100x100bb", "300x300bb");
+                    }
+
+                    tracks.add(new TrackSearchResponse(title, artist, albumTitle, coverUrl, previewUrl));
+                }
+                if (!tracks.isEmpty()) {
+                    return tracks;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("iTunes public search fallback to Deezer for query '{}': {}", query, e.getMessage());
+        }
+
+        // 2. Fallback to public Deezer API (no token required)
+        try {
+            String responseBody = restClient.get()
+                    .uri("https://api.deezer.com/search?q={query}&limit=8", query.trim())
+                    .retrieve()
+                    .body(String.class);
+
+            JsonNode root = objectMapper.readTree(responseBody);
+            JsonNode data = root.path("data");
+            if (data.isArray()) {
+                List<TrackSearchResponse> tracks = new ArrayList<>();
+                for (JsonNode item : data) {
+                    String previewUrl = item.path("preview").asText(null);
+                    if (previewUrl == null || previewUrl.isBlank()) continue;
+
+                    String title = item.path("title").asText("");
+                    String artist = item.path("artist").path("name").asText("");
+                    String albumTitle = item.path("album").path("title").asText("");
+                    String coverUrl = item.path("album").path("cover_medium").asText(null);
+
+                    tracks.add(new TrackSearchResponse(title, artist, albumTitle, coverUrl, previewUrl));
+                }
+                return tracks;
+            }
+        } catch (Exception e) {
+            log.error("Error searching tracks on public APIs for query '{}': {}", query, e.getMessage());
+        }
+
+        return Collections.emptyList();
     }
 }

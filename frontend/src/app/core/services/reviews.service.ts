@@ -38,4 +38,8 @@ export class ReviewsService {
   public getMyReviewForAlbum(externalId: string): Observable<ReviewResponse> {
     return this.http.get<ReviewResponse>(`${environment.apiUrl}/reviews/me/album/${externalId}`);
   }
+
+  public getMyTrackReviewsForAlbum(externalId: string): Observable<ReviewResponse[]> {
+    return this.http.get<ReviewResponse[]>(`${environment.apiUrl}/reviews/me/album/${externalId}/tracks`);
+  }
 }

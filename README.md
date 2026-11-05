@@ -30,7 +30,7 @@ O **Muly** é uma plataforma focada em entusiastas e amantes de música que dese
 
 ---
 
-## ✨ Funcionalidades (v1.0)
+## ✨ Funcionalidades (v1.1)
 
 1. **Autenticação & Segurança (JWT)**:
    - Cadastro e login via username + senha com hash BCrypt.
@@ -43,15 +43,17 @@ O **Muly** é uma plataforma focada em entusiastas e amantes de música que dese
    - Cache local transparente no banco no primeiro acesso a um álbum.
    - Visualização detalhada de álbuns: capa, ano de lançamento, artista e tracklist completa com tempo de duração.
 
-3. **Avaliações & Resenhas (Reviews)**:
-   - Atribuição de nota (0.5 a 5.0 estrelas) e texto de resenha por álbum.
-   - Modelo único de review por usuário por álbum (com opção de editar ou excluir).
-   - Cálculo dinâmico da média geral e total de avaliações por disco.
-   - Consulta pública de reviews por álbum e por perfil de usuário.
+3. **Avaliações & Resenhas (Álbuns & Faixas Individuais)**:
+   - Atribuição de nota (0.5 a 5.0 estrelas) e texto de resenha por álbum completo.
+   - **Avaliação individual por faixa**: selecione qualquer música da tracklist para registrar notas e comentários específicos por música.
+   - Cálculo dinâmico da média geral e total de avaliações por disco e por faixa.
+   - Filtros na página do álbum por Todas, Álbum, Músicas ou Faixa específica.
+   - Consulta pública de reviews no perfil do usuário com histórico unificado.
 
 4. **Perfil Público & Customização**:
    - Perfil público acessível por `/profile/:username`.
    - Destaque para o **Álbum Favorito de Todos os Tempos** na capa do perfil.
+   - **Música do Momento (com Player de Áudio integrado)**: escolha a música favorita atual com botão de Play/Pause e barra de progresso (via APIs públicas do iTunes/Deezer, sem necessidade de token).
    - Lista ordenada de **Top 4 Álbuns**.
    - Histórico das resenhas e avaliações do usuário.
    - Painel exclusivo `/profile/me/edit` para o usuário gerenciar seus destaques com busca no catálogo.
@@ -169,8 +171,8 @@ Acesse a aplicação no navegador em `http://localhost:4200`.
 
 ---
 
-## 🗺️ Roadmap Futuro (v1.1+)
-- [ ] Mini player de áudio integrado (iTunes Search API ou embed do Spotify).
+## 🗺️ Roadmap Futuro (v1.2+)
+- [x] Mini player de áudio integrado (iTunes Search API / Deezer Public API).
 - [ ] OAuth2 Social Login (Google e Discord).
 - [ ] Follow de outros usuários e Feed de atividade na Home.
 - [ ] Listas colaborativas de discos.

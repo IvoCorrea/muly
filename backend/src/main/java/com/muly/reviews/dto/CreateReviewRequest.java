@@ -2,6 +2,7 @@ package com.muly.reviews.dto;
 
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -9,6 +10,12 @@ import jakarta.validation.constraints.Size;
 public record CreateReviewRequest(
         @NotBlank(message = "Album Spotify ID is required.")
         String spotifyId,
+
+        @Min(value = 1, message = "Track number must be at least 1.")
+        Integer trackNumber,
+
+        @Size(max = 255, message = "Track title cannot exceed 255 characters.")
+        String trackTitle,
 
         @NotNull(message = "Rating is required.")
         @DecimalMin(value = "0.5", message = "Rating must be at least 0.5.")

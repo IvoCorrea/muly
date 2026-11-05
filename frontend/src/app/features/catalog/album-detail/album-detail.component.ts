@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, inject, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { AlbumDetailResponse } from '../../../core/models/catalog.models';
+import { AlbumDetailResponse, AlbumTrackResponse } from '../../../core/models/catalog.models';
 import { AlbumReviewsSummaryResponse, ReviewResponse } from '../../../core/models/reviews.models';
 import { AuthService } from '../../../core/services/auth.service';
 import { CatalogService } from '../../../core/services/catalog.service';
@@ -59,29 +59,97 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
               </p>
 
               <!-- Média de Avaliações -->
-              <div class="flex items-center gap-4 mt-4 py-3 px-4 bg-[#1b2228] rounded-lg border border-[#2a343d] w-fit">
-                <div>
-                  <span class="text-2xl font-black text-white">
-                    {{ reviewsSummary?.averageRating ? (reviewsSummary?.averageRating?.toFixed(1)) : '—' }}
-                  </span>
-                  <span class="text-xs text-gray-500"> / 5.0</span>
+              <div class="flex flex-wrap items-center gap-4 mt-4">
+                <div class="flex items-center gap-4 py-3 px-4 bg-[#1b2228] rounded-lg border border-[#2a343d] w-fit">
+                  <div>
+                    <span class="text-[10px] uppercase tracking-wider font-bold text-gray-400 block">Média do Álbum</span>
+                    <span class="text-2xl font-black text-white">
+                      {{ reviewsSummary?.averageRating ? (reviewsSummary?.averageRating?.toFixed(1)) : '—' }}
+                    </span>
+                    <span class="text-xs text-gray-500"> / 5.0</span>
+                  </div>
+                  <div class="h-8 w-px bg-[#2a343d]"></div>
+                  <div>
+                    <app-star-rating [rating]="reviewsSummary?.averageRating || 0" [readonly]="true" [showValue]="false" />
+                    <span class="text-[11px] text-gray-400">
+                      {{ reviewsSummary?.totalReviews || 0 }} {{ reviewsSummary?.totalReviews === 1 ? 'avaliação' : 'avaliações' }}
+                    </span>
+                  </div>
                 </div>
-                <div class="h-6 w-px bg-[#2a343d]"></div>
-                <div>
-                  <app-star-rating [rating]="reviewsSummary?.averageRating || 0" [readonly]="true" [showValue]="false" />
-                  <span class="text-[11px] text-gray-400">
-                    {{ reviewsSummary?.totalReviews || 0 }} {{ reviewsSummary?.totalReviews === 1 ? 'avaliação' : 'avaliações' }}
-                  </span>
-                </div>
+
+                @if (selectedTrack) {
+                  <div class="flex items-center gap-4 py-3 px-4 bg-emerald-500/10 rounded-lg border border-emerald-500/30 w-fit">
+                    <div>
+                      <span class="text-[10px] uppercase tracking-wider font-bold text-emerald-400 block truncate max-w-[180px]">
+                        Faixa #{{ selectedTrack.trackNumber }} • {{ selectedTrack.title }}
+                      </span>
+                      <span class="text-2xl font-black text-white">
+                        {{ getTrackAverageRating(selectedTrack.trackNumber) !== null ? getTrackAverageRating(selectedTrack.trackNumber)!.toFixed(1) : '—' }}
+                      </span>
+                      <span class="text-xs text-gray-400"> / 5.0</span>
+                    </div>
+                    <div class="h-8 w-px bg-emerald-500/20"></div>
+                    <div>
+                      <app-star-rating [rating]="getTrackAverageRating(selectedTrack.trackNumber) || 0" [readonly]="true" [showValue]="false" />
+                      <span class="text-[11px] text-emerald-300">
+                        {{ getTrackReviewsCount(selectedTrack.trackNumber) }} {{ getTrackReviewsCount(selectedTrack.trackNumber) === 1 ? 'avaliação da faixa' : 'avaliações da faixa' }}
+                      </span>
+                    </div>
+                  </div>
+                }
               </div>
             </div>
 
             <!-- Caixa de Avaliação do Usuário -->
             <div class="mt-6 bg-[#161b20] border border-[#2a343d] rounded-lg p-5">
               @if (authService.isAuthenticated()) {
-                <h3 class="text-xs font-bold uppercase tracking-wider text-gray-300 mb-2">
-                  {{ myReview ? 'Sua Avaliação' : 'Avalie este álbum' }}
-                </h3>
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-[#242c34]">
+                  <div>
+                    <div class="flex items-center gap-2">
+                      <span
+                        class="text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded"
+                        [ngClass]="selectedTrack ? 'bg-emerald-500 text-black' : 'bg-[#242c34] text-emerald-400'"
+                      >
+                        {{ selectedTrack ? 'Avaliando Música' : 'Avaliando Álbum Completo' }}
+                      </span>
+                      @if (selectedTrack) {
+                        <button
+                          type="button"
+                          (click)="selectTrack(null)"
+                          class="cursor-pointer text-[11px] text-gray-400 hover:text-white underline"
+                        >
+                          Voltar para o álbum
+                        </button>
+                      }
+                    </div>
+                    <h3 class="text-sm font-bold text-white mt-1.5">
+                      @if (selectedTrack) {
+                        #{{ selectedTrack.trackNumber }} - {{ selectedTrack.title }}
+                      } @else {
+                        {{ album.title }} (Álbum Completo)
+                      }
+                    </h3>
+                  </div>
+
+                  <!-- Seletor rápido de faixa ou álbum -->
+                  @if (album.tracks.length > 0) {
+                    <div class="flex items-center gap-2">
+                      <label class="text-[11px] text-gray-400 font-semibold whitespace-nowrap">Escolher:</label>
+                      <select
+                        [ngModel]="selectedTrack?.trackNumber || 0"
+                        (ngModelChange)="onTrackDropdownChange($event)"
+                        class="bg-[#101417] border border-[#2a343d] rounded px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-emerald-500 max-w-[220px]"
+                      >
+                        <option [ngValue]="0">💿 Álbum Completo</option>
+                        @for (track of album.tracks; track track.trackNumber) {
+                          <option [ngValue]="track.trackNumber">
+                            🎵 {{ track.trackNumber }}. {{ track.title }} {{ getMyTrackReview(track.trackNumber) ? ' (★ ' + getMyTrackReview(track.trackNumber)!.rating + ')' : '' }}
+                          </option>
+                        }
+                      </select>
+                    </div>
+                  }
+                </div>
 
                 <div class="flex items-center gap-4 mb-3">
                   <app-star-rating
@@ -89,28 +157,34 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                     [readonly]="false"
                     (ratingChange)="onRatingSelected($event)"
                   />
-                  <span class="text-xs text-gray-400">Clique para selecionar a nota</span>
+                  <span class="text-xs text-gray-400">
+                    {{ currentActiveReview ? 'Sua nota salva (clique para alterar)' : 'Clique para selecionar a nota' }}
+                  </span>
                 </div>
 
                 <textarea
                   [(ngModel)]="userReviewText"
                   rows="3"
-                  placeholder="Escreva sua resenha ou pensamentos sobre este disco (opcional)..."
+                  [placeholder]="selectedTrack
+                    ? 'Escreva sua resenha sobre a faixa ' + selectedTrack.title + ' (opcional)...'
+                    : 'Escreva sua resenha ou pensamentos sobre este disco (opcional)...'"
                   class="w-full bg-[#101417] border border-[#242c34] rounded p-3 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-emerald-500 transition-colors"
                 ></textarea>
 
                 <div class="flex items-center justify-between mt-3">
-                  @if (myReview) {
+                  @if (currentActiveReview) {
                     <button
                       type="button"
                       (click)="deleteReview()"
                       [disabled]="savingReview"
                       class="cursor-pointer disabled:cursor-not-allowed text-xs text-red-400 hover:text-red-300 hover:underline"
                     >
-                      Excluir minha review
+                      Excluir minha review {{ selectedTrack ? 'desta música' : 'do álbum' }}
                     </button>
                   } @else {
-                    <div></div>
+                    <span class="text-[11px] text-gray-500">
+                      Dica: você também pode clicar em qualquer música na lista abaixo para avaliá-la.
+                    </span>
                   }
 
                   <button
@@ -119,14 +193,14 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                     [disabled]="savingReview || userRating === 0"
                     class="cursor-pointer disabled:cursor-not-allowed bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black font-bold px-4 py-2 rounded text-xs uppercase tracking-wider transition-colors"
                   >
-                    {{ savingReview ? 'Salvando...' : (myReview ? 'Atualizar Review' : 'Publicar Review') }}
+                    {{ savingReview ? 'Salvando...' : (currentActiveReview ? 'Atualizar Review' : 'Publicar Review') }}
                   </button>
                 </div>
               } @else {
                 <div class="flex items-center justify-between">
                   <div>
-                    <h3 class="text-sm font-semibold text-gray-200">Quer avaliar este álbum?</h3>
-                    <p class="text-xs text-gray-400 mt-0.5">Faça login para dar sua nota e registrar sua resenha.</p>
+                    <h3 class="text-sm font-semibold text-gray-200">Quer avaliar este álbum ou suas músicas?</h3>
+                    <p class="text-xs text-gray-400 mt-0.5">Faça login para dar sua nota ao disco ou avaliar faixas individuais.</p>
                   </div>
                   <a
                     routerLink="/login"
@@ -146,22 +220,72 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
           
           <!-- Faixas do Disco -->
           <div class="lg:col-span-1">
-            <h2 class="text-sm font-black text-gray-200 uppercase tracking-widest mb-4">
-              Faixas ({{ album.tracks.length }})
-            </h2>
+            <div class="flex items-center justify-between mb-2">
+              <h2 class="text-sm font-black text-gray-200 uppercase tracking-widest">
+                Faixas ({{ album.tracks.length }})
+              </h2>
+              @if (selectedTrack) {
+                <button
+                  type="button"
+                  (click)="selectTrack(null)"
+                  class="cursor-pointer text-[11px] text-emerald-400 hover:underline font-semibold"
+                >
+                  Limpar seleção
+                </button>
+              }
+            </div>
+            <p class="text-[11px] text-gray-500 mb-3">
+              Clique em uma faixa para fazer um review individual ou ver suas avaliações.
+            </p>
 
             @if (album.tracks.length > 0) {
               <div class="bg-[#1b2228] border border-[#2a343d] rounded-lg divide-y divide-[#242c34] overflow-hidden text-xs">
                 @for (track of album.tracks; track track.trackNumber) {
-                  <div class="px-4 py-2.5 flex items-center justify-between hover:bg-[#222b33] transition-colors">
-                    <div class="flex items-center gap-3 truncate">
-                      <span class="text-gray-500 font-mono text-[11px] w-4 text-right">{{ track.trackNumber }}</span>
-                      <span class="text-gray-300 truncate font-medium">{{ track.title }}</span>
+                  <button
+                    type="button"
+                    (click)="toggleTrackSelection(track)"
+                    class="cursor-pointer w-full text-left px-4 py-2.5 flex items-center justify-between transition-colors"
+                    [ngClass]="{
+                      'bg-emerald-500/15 border-l-2 border-l-emerald-400': selectedTrack?.trackNumber === track.trackNumber,
+                      'hover:bg-[#222b33]': selectedTrack?.trackNumber !== track.trackNumber
+                    }"
+                  >
+                    <div class="flex items-center gap-3 truncate pr-2">
+                      <span
+                        class="font-mono text-[11px] w-4 text-right shrink-0"
+                        [ngClass]="selectedTrack?.trackNumber === track.trackNumber ? 'text-emerald-400 font-bold' : 'text-gray-500'"
+                      >
+                        {{ track.trackNumber }}
+                      </span>
+                      <span
+                        class="truncate font-medium"
+                        [ngClass]="selectedTrack?.trackNumber === track.trackNumber ? 'text-emerald-300 font-bold' : 'text-gray-300'"
+                      >
+                        {{ track.title }}
+                      </span>
                     </div>
-                    <span class="text-gray-500 text-[11px] font-mono ml-2">
-                      {{ formatDuration(track.durationMs) }}
-                    </span>
-                  </div>
+
+                    <div class="flex items-center gap-2 shrink-0">
+                      @if (getMyTrackReview(track.trackNumber); as myTrkRev) {
+                        <span
+                          class="text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded"
+                          title="Sua nota para esta música"
+                        >
+                          ★ {{ myTrkRev.rating.toFixed(1) }}
+                        </span>
+                      } @else if (getTrackAverageRating(track.trackNumber) !== null) {
+                        <span
+                          class="text-[10px] font-semibold bg-[#12161a] text-gray-400 px-1.5 py-0.5 rounded"
+                          title="Média da comunidade para esta música"
+                        >
+                          ★ {{ getTrackAverageRating(track.trackNumber)!.toFixed(1) }}
+                        </span>
+                      }
+                      <span class="text-gray-500 text-[11px] font-mono">
+                        {{ formatDuration(track.durationMs) }}
+                      </span>
+                    </div>
+                  </button>
                 }
               </div>
             } @else {
@@ -171,22 +295,71 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
 
           <!-- Resenhas da Comunidade -->
           <div class="lg:col-span-2">
-            <h2 class="text-sm font-black text-gray-200 uppercase tracking-widest mb-4">
-              Resenhas da Comunidade ({{ reviewsSummary?.totalReviews || 0 }})
-            </h2>
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+              <h2 class="text-sm font-black text-gray-200 uppercase tracking-widest">
+                Resenhas da Comunidade ({{ filteredCommunityReviews.length }})
+              </h2>
 
-            @if (reviewsSummary?.reviews && reviewsSummary!.reviews.length > 0) {
+              <!-- Filtros de Resenhas -->
+              <div class="flex flex-wrap items-center gap-1.5">
+                <button
+                  type="button"
+                  (click)="reviewFilter = 'all'"
+                  class="cursor-pointer text-[11px] font-bold px-2.5 py-1 rounded transition-colors"
+                  [ngClass]="reviewFilter === 'all' ? 'bg-emerald-500 text-black' : 'bg-[#1b2228] text-gray-400 hover:text-white border border-[#2a343d]'"
+                >
+                  Todas ({{ totalCombinedReviewsCount }})
+                </button>
+                <button
+                  type="button"
+                  (click)="reviewFilter = 'album'"
+                  class="cursor-pointer text-[11px] font-bold px-2.5 py-1 rounded transition-colors"
+                  [ngClass]="reviewFilter === 'album' ? 'bg-emerald-500 text-black' : 'bg-[#1b2228] text-gray-400 hover:text-white border border-[#2a343d]'"
+                >
+                  Álbum ({{ reviewsSummary?.reviews?.length || 0 }})
+                </button>
+                <button
+                  type="button"
+                  (click)="reviewFilter = 'tracks'"
+                  class="cursor-pointer text-[11px] font-bold px-2.5 py-1 rounded transition-colors"
+                  [ngClass]="reviewFilter === 'tracks' ? 'bg-emerald-500 text-black' : 'bg-[#1b2228] text-gray-400 hover:text-white border border-[#2a343d]'"
+                >
+                  Músicas ({{ reviewsSummary?.trackReviews?.length || 0 }})
+                </button>
+                @if (selectedTrack) {
+                  <button
+                    type="button"
+                    (click)="reviewFilter = 'selectedTrack'"
+                    class="cursor-pointer text-[11px] font-bold px-2.5 py-1 rounded transition-colors truncate max-w-[180px]"
+                    [ngClass]="reviewFilter === 'selectedTrack' ? 'bg-emerald-500 text-black' : 'bg-[#1b2228] text-emerald-400 hover:text-white border border-emerald-500/40'"
+                  >
+                    Faixa #{{ selectedTrack.trackNumber }} ({{ getTrackReviewsCount(selectedTrack.trackNumber) }})
+                  </button>
+                }
+              </div>
+            </div>
+
+            @if (filteredCommunityReviews.length > 0) {
               <div class="space-y-4">
-                @for (rev of reviewsSummary!.reviews; track rev.id) {
+                @for (rev of filteredCommunityReviews; track rev.id) {
                   <div class="bg-[#1b2228] border border-[#2a343d] rounded-lg p-5">
-                    <div class="flex items-center justify-between mb-2">
-                      <div class="flex items-center gap-2">
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                      <div class="flex flex-wrap items-center gap-2">
                         <a
                           [routerLink]="['/profile', rev.username]"
                           class="font-bold text-sm text-gray-100 hover:text-emerald-400 transition-colors"
                         >
                           {{ rev.username }}
                         </a>
+                        @if (rev.trackNumber !== null) {
+                          <span class="text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+                            🎵 Faixa #{{ rev.trackNumber }} • {{ rev.trackTitle }}
+                          </span>
+                        } @else {
+                          <span class="text-[10px] font-semibold bg-[#12161a] text-gray-400 border border-[#242c34] px-2 py-0.5 rounded-full">
+                            💿 Álbum Completo
+                          </span>
+                        }
                         <span class="text-[11px] text-gray-500">• {{ formatDate(rev.createdAt) }}</span>
                       </div>
                       <app-star-rating [rating]="rev.rating" [readonly]="true" />
@@ -202,7 +375,13 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
               </div>
             } @else {
               <div class="text-center py-12 bg-[#1b2228] border border-[#2a343d] rounded-lg text-gray-500 text-xs">
-                Ainda não há resenhas para este álbum. Seja o primeiro a avaliar!
+                @if (reviewFilter === 'selectedTrack' && selectedTrack) {
+                  Ainda não há resenhas para a faixa "{{ selectedTrack.title }}". Seja o primeiro a avaliar!
+                } @else if (reviewFilter === 'tracks') {
+                  Ainda não há resenhas individuais para músicas deste álbum. Clique em uma faixa ao lado para avaliar!
+                } @else {
+                  Ainda não há resenhas para este álbum. Seja o primeiro a avaliar!
+                }
               </div>
             }
           </div>
@@ -230,12 +409,48 @@ export class AlbumDetailComponent implements OnInit {
   album: AlbumDetailResponse | null = null;
   reviewsSummary: AlbumReviewsSummaryResponse | null = null;
   myReview: ReviewResponse | null = null;
+  myTrackReviews: ReviewResponse[] = [];
+
+  selectedTrack: AlbumTrackResponse | null = null;
+  reviewFilter: 'all' | 'album' | 'tracks' | 'selectedTrack' = 'all';
 
   loading = true;
   savingReview = false;
 
   userRating: number = 0;
   userReviewText: string = '';
+
+  get currentActiveReview(): ReviewResponse | null {
+    if (this.selectedTrack) {
+      return this.getMyTrackReview(this.selectedTrack.trackNumber);
+    }
+    return this.myReview;
+  }
+
+  get totalCombinedReviewsCount(): number {
+    const albumCount = this.reviewsSummary?.reviews?.length || 0;
+    const trackCount = this.reviewsSummary?.trackReviews?.length || 0;
+    return albumCount + trackCount;
+  }
+
+  get filteredCommunityReviews(): ReviewResponse[] {
+    const albumRevs = this.reviewsSummary?.reviews || [];
+    const trackRevs = this.reviewsSummary?.trackReviews || [];
+
+    if (this.reviewFilter === 'album') {
+      return albumRevs;
+    }
+    if (this.reviewFilter === 'tracks') {
+      return trackRevs;
+    }
+    if (this.reviewFilter === 'selectedTrack' && this.selectedTrack) {
+      return trackRevs.filter(r => r.trackNumber === this.selectedTrack!.trackNumber);
+    }
+
+    return [...albumRevs, ...trackRevs].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  }
 
   ngOnInit(): void {
     this.route.paramMap.subscribe(params => {
@@ -248,12 +463,15 @@ export class AlbumDetailComponent implements OnInit {
 
   loadAlbumData(spotifyId: string): void {
     this.loading = true;
+    this.selectedTrack = null;
+    this.reviewFilter = 'all';
+
     this.catalogService.getAlbum(spotifyId).subscribe({
       next: (data) => {
         this.album = data;
         this.loadReviews(spotifyId);
         if (this.authService.isAuthenticated()) {
-          this.loadMyReview(spotifyId);
+          this.loadMyReviews(spotifyId);
         } else {
           this.loading = false;
         }
@@ -273,21 +491,81 @@ export class AlbumDetailComponent implements OnInit {
     });
   }
 
-  loadMyReview(spotifyId: string): void {
+  loadMyReviews(spotifyId: string): void {
+    this.reviewsService.getMyTrackReviewsForAlbum(spotifyId).subscribe({
+      next: (trackRevs) => {
+        this.myTrackReviews = trackRevs || [];
+      },
+      error: () => {
+        this.myTrackReviews = [];
+      }
+    });
+
     this.reviewsService.getMyReviewForAlbum(spotifyId).subscribe({
       next: (rev) => {
         this.myReview = rev;
-        if (rev) {
-          this.userRating = rev.rating;
-          this.userReviewText = rev.reviewText || '';
-        }
+        this.syncFormWithActiveTarget();
         this.loading = false;
       },
       error: () => {
         this.myReview = null;
+        this.syncFormWithActiveTarget();
         this.loading = false;
       }
     });
+  }
+
+  toggleTrackSelection(track: AlbumTrackResponse): void {
+    if (this.selectedTrack?.trackNumber === track.trackNumber) {
+      this.selectTrack(null);
+    } else {
+      this.selectTrack(track);
+    }
+  }
+
+  onTrackDropdownChange(trackNum: number): void {
+    if (!trackNum || trackNum === 0) {
+      this.selectTrack(null);
+    } else {
+      const found = this.album?.tracks.find(t => t.trackNumber === Number(trackNum)) || null;
+      this.selectTrack(found);
+    }
+  }
+
+  selectTrack(track: AlbumTrackResponse | null): void {
+    this.selectedTrack = track;
+    if (track && this.reviewFilter === 'selectedTrack') {
+      // keep filter on selectedTrack
+    } else if (!track && this.reviewFilter === 'selectedTrack') {
+      this.reviewFilter = 'all';
+    }
+    this.syncFormWithActiveTarget();
+  }
+
+  private syncFormWithActiveTarget(): void {
+    const active = this.currentActiveReview;
+    if (active) {
+      this.userRating = active.rating;
+      this.userReviewText = active.reviewText || '';
+    } else {
+      this.userRating = 0;
+      this.userReviewText = '';
+    }
+  }
+
+  getMyTrackReview(trackNumber: number): ReviewResponse | null {
+    return this.myTrackReviews.find(r => r.trackNumber === trackNumber) || null;
+  }
+
+  getTrackReviewsCount(trackNumber: number): number {
+    return (this.reviewsSummary?.trackReviews || []).filter(r => r.trackNumber === trackNumber).length;
+  }
+
+  getTrackAverageRating(trackNumber: number): number | null {
+    const revs = (this.reviewsSummary?.trackReviews || []).filter(r => r.trackNumber === trackNumber);
+    if (revs.length === 0) return null;
+    const sum = revs.reduce((acc, r) => acc + r.rating, 0);
+    return Math.round((sum / revs.length) * 10) / 10;
   }
 
   onRatingSelected(rating: number): void {
@@ -300,11 +578,22 @@ export class AlbumDetailComponent implements OnInit {
     this.savingReview = true;
     this.reviewsService.createOrUpdateReview({
       spotifyId: this.album.externalId,
+      trackNumber: this.selectedTrack ? this.selectedTrack.trackNumber : null,
+      trackTitle: this.selectedTrack ? this.selectedTrack.title : null,
       rating: this.userRating,
       reviewText: this.userReviewText.trim()
     }).subscribe({
       next: (saved) => {
-        this.myReview = saved;
+        if (this.selectedTrack) {
+          const idx = this.myTrackReviews.findIndex(r => r.trackNumber === this.selectedTrack!.trackNumber);
+          if (idx >= 0) {
+            this.myTrackReviews[idx] = saved;
+          } else {
+            this.myTrackReviews = [...this.myTrackReviews, saved];
+          }
+        } else {
+          this.myReview = saved;
+        }
         this.savingReview = false;
         if (this.album) {
           this.loadReviews(this.album.externalId);
@@ -317,12 +606,17 @@ export class AlbumDetailComponent implements OnInit {
   }
 
   deleteReview(): void {
-    if (!this.myReview || !this.album) return;
+    const active = this.currentActiveReview;
+    if (!active || !this.album) return;
 
     this.savingReview = true;
-    this.reviewsService.deleteReview(this.myReview.id).subscribe({
+    this.reviewsService.deleteReview(active.id).subscribe({
       next: () => {
-        this.myReview = null;
+        if (this.selectedTrack) {
+          this.myTrackReviews = this.myTrackReviews.filter(r => r.id !== active.id);
+        } else {
+          this.myReview = null;
+        }
         this.userRating = 0;
         this.userReviewText = '';
         this.savingReview = false;

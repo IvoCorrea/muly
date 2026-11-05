@@ -5,6 +5,7 @@ import java.util.List;
 public record AlbumReviewsSummaryResponse(
         Double averageRating,
         long totalReviews,
-        List<ReviewResponse> reviews
+        List<ReviewResponse> reviews,
+        List<ReviewResponse> trackReviews
 ) {
 }

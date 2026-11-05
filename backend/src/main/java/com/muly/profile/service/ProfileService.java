@@ -55,13 +55,47 @@ public class ProfileService {
 
         long totalReviews = reviewService.countReviewsByUser(user.getUsername());
 
+        CurrentTrackResponse currentTrack = null;
+        if (user.getCurrentTrackTitle() != null && !user.getCurrentTrackTitle().isBlank()) {
+            currentTrack = new CurrentTrackResponse(
+                    user.getCurrentTrackTitle(),
+                    user.getCurrentTrackArtist(),
+                    user.getCurrentTrackAlbum(),
+                    user.getCurrentTrackCoverUrl(),
+                    user.getCurrentTrackPreviewUrl()
+            );
+        }
+
         return new UserProfileResponse(
                 user.getUsername(),
                 user.getCreatedAt(),
                 favoriteAlbum,
+                currentTrack,
                 topAlbums,
                 totalReviews
         );
+    }
+
+    @Transactional
+    public UserProfileResponse setCurrentTrack(String username, SetCurrentTrackRequest request) {
+        User user = userService.getByUsername(username);
+
+        if (request == null || request.title() == null || request.title().isBlank()) {
+            user.setCurrentTrackTitle(null);
+            user.setCurrentTrackArtist(null);
+            user.setCurrentTrackAlbum(null);
+            user.setCurrentTrackCoverUrl(null);
+            user.setCurrentTrackPreviewUrl(null);
+        } else {
+            user.setCurrentTrackTitle(request.title().trim());
+            user.setCurrentTrackArtist(request.artist() != null ? request.artist().trim() : null);
+            user.setCurrentTrackAlbum(request.albumTitle() != null ? request.albumTitle().trim() : null);
+            user.setCurrentTrackCoverUrl(request.coverUrl() != null ? request.coverUrl().trim() : null);
+            user.setCurrentTrackPreviewUrl(request.previewUrl() != null ? request.previewUrl().trim() : null);
+        }
+
+        userService.save(user);
+        return getProfile(username);
     }
 
     @Transactional
