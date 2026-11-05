@@ -25,16 +25,20 @@ public class CorsConfig {
         for (String origin : frontendUrl.split(",")) {
             String cleaned = origin.trim().replaceAll("/+$", "");
             if (!cleaned.isEmpty()) {
-                config.addAllowedOrigin(cleaned);
+                config.addAllowedOriginPattern(cleaned);
             }
         }
+        config.addAllowedOriginPattern("https://muly.xyz");
+        config.addAllowedOriginPattern("https://www.muly.xyz");
+        config.addAllowedOriginPattern("https://*.vercel.app");
         config.addAllowedMethod(HttpMethod.GET);
         config.addAllowedMethod(HttpMethod.PUT);
         config.addAllowedMethod(HttpMethod.DELETE);
         config.addAllowedMethod(HttpMethod.POST);
         config.addAllowedMethod(HttpMethod.PATCH);
+        config.addAllowedMethod(HttpMethod.OPTIONS);
 
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        config.setAllowedHeaders(List.of("*"));
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
 
         source.registerCorsConfiguration("/**", config);
