@@ -32,12 +32,11 @@ public class SpotifyService {
 
     public SpotifyService(
             @Value("${spotify.client-id:}") String clientId,
-            @Value("${spotify.client-secret:}") String clientSecret,
-            ObjectMapper objectMapper
+            @Value("${spotify.client-secret:}") String clientSecret
     ) {
         this.clientId = clientId;
         this.clientSecret = clientSecret;
-        this.objectMapper = objectMapper;
+        this.objectMapper = new ObjectMapper();
         this.restClient = RestClient.builder().build();
     }
 
@@ -84,7 +83,7 @@ public class SpotifyService {
 
         try {
             String responseBody = restClient.get()
-                    .uri("https://api.spotify.com/v1/search?q={query}&type=album&limit=20", query)
+                    .uri("https://api.spotify.com/v1/search?q={query}&type=album&limit=10", query)
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                     .retrieve()
                     .body(String.class);
