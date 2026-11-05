@@ -17,13 +17,13 @@ import { AlbumCardComponent } from '../../shared/components/album-card/album-car
       <section class="py-16 sm:py-24 px-4 text-center border-b border-[#242c34] bg-gradient-to-b from-[#181e24] to-[#14181c]">
         <div class="max-w-3xl mx-auto">
           <span class="inline-block text-xs font-black uppercase tracking-widest text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full mb-4">
-            O Letterboxd de Música
+            A rede social para quem ama música
           </span>
           <h1 class="text-4xl sm:text-6xl font-black text-white tracking-tight leading-tight">
-            Descubra, avalie e compartilhe seus álbuns.
+            Catalogue o que você ouve. Compartilhe o que você sente."
           </h1>
           <p class="text-sm sm:text-base text-gray-400 mt-4 leading-relaxed max-w-xl mx-auto">
-            Catalogue o que você ouve, dê notas de 1 a 5 estrelas, escreva resenhas e personalize seu perfil público com seus álbuns favoritos.
+            Registre suas audições, monte listas temáticas e descubra o que seus amigos andam ouvindo.
           </p>
 
           <!-- Input de Busca Rápida -->

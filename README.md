@@ -1,22 +1,26 @@
 # Muly 🎵
 
-> O **Letterboxd de música**: catalogue o que você ouve, avalie álbuns com notas e resenhas, e personalize seu perfil público com seus discos favoritos.
+> A **rede social para quem ama música**: catalogue o que você ouve, avalie álbuns com notas e resenhas, e personalize seu perfil público com seus discos favoritos.
 
 ---
 
 ## 📌 Sumário
-- [Sobre o Projeto](#-sobre-o-projeto)
-- [Funcionalidades (v1.0)](#-funcionalidades-v10)
-- [Arquitetura & Decisões](#-arquitetura--decisões)
-- [Tech Stack](#-tech-stack)
-- [Estrutura do Repositório](#-estrutura-do-repositório)
-- [Como Rodar Localmente](#-como-rodar-localmente)
-  - [Pré-requisitos](#pré-requisitos)
-  - [1. Banco de Dados (Docker)](#1-banco-de-dados-docker)
-  - [2. Backend (Spring Boot)](#2-backend-spring-boot)
-  - [3. Frontend (Angular)](#3-frontend-angular)
-- [Variáveis de Ambiente](#-variáveis-de-ambiente)
-- [Roadmap Futuro](#-roadmap-futuro)
+- [Muly 🎵](#muly-)
+  - [📌 Sumário](#-sumário)
+  - [🎧 Sobre o Projeto](#-sobre-o-projeto)
+  - [✨ Funcionalidades (v1.0)](#-funcionalidades-v10)
+  - [🏛️ Arquitetura \& Decisões](#️-arquitetura--decisões)
+  - [🛠 Tech Stack](#-tech-stack)
+    - [Backend](#backend)
+    - [Frontend](#frontend)
+  - [📂 Estrutura do Repositório](#-estrutura-do-repositório)
+  - [🚀 Como Rodar Localmente](#-como-rodar-localmente)
+    - [Pré-requisitos](#pré-requisitos)
+    - [1. Banco de Dados (Docker)](#1-banco-de-dados-docker)
+    - [2. Backend (Spring Boot)](#2-backend-spring-boot)
+    - [3. Frontend (Angular)](#3-frontend-angular)
+  - [🌐 Variáveis de Ambiente](#-variáveis-de-ambiente)
+  - [🗺️ Roadmap Futuro (v1.1+)](#️-roadmap-futuro-v11)
 
 ---
 
