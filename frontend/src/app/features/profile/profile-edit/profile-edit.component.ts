@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, OnDestroy, OnInit } from '@angular/core';
+import { Component, ElementRef, HostListener, inject, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AlbumResponse, TrackSearchResponse } from '../../../core/models/catalog.models';
@@ -73,16 +73,17 @@ interface TopSlot {
               }
 
               <!-- Busca de Álbum Favorito -->
-              <div class="mt-2">
+              <div #favSearchContainer class="mt-2">
                 <input
                   type="text"
                   [(ngModel)]="favSearchQuery"
+                  (focus)="onFocusFav()"
                   (input)="onSearchFav()"
                   placeholder="Buscar no Spotify para definir favorito..."
                   class="w-full bg-[#12161a] border border-[#242c34] rounded px-3 py-2 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-emerald-500"
                 />
 
-                @if (searchingFav || favSearchResults.length > 0) {
+                @if (showFavDropdown && (searchingFav || favSearchResults.length > 0)) {
                   <div class="animate-dropdown bg-[#12161a] border border-[#2a343d] rounded mt-1 max-h-48 overflow-y-auto divide-y divide-[#242c34] shadow-xl">
                     @if (searchingFav && favSearchResults.length === 0) {
                       @for (s of [1, 2, 3]; track s) {
@@ -187,16 +188,17 @@ interface TopSlot {
               }
 
               <!-- Busca de Música do Momento -->
-              <div class="mt-2">
+              <div #trackSearchContainer class="mt-2">
                 <input
                   type="text"
                   [(ngModel)]="trackSearchQuery"
+                  (focus)="onFocusTrack()"
                   (input)="onSearchTrack()"
                   placeholder="Digite o nome da música ou artista (ex: Creep Radiohead, Daechwita, Daft Punk)..."
                   class="w-full bg-[#12161a] border border-[#242c34] rounded px-3 py-2 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-emerald-500"
                 />
 
-                @if (searchingTrack || trackSearchResults.length > 0) {
+                @if (showTrackDropdown && (searchingTrack || trackSearchResults.length > 0)) {
                   <div class="animate-dropdown bg-[#12161a] border border-[#2a343d] rounded mt-1 max-h-56 overflow-y-auto divide-y divide-[#242c34] shadow-xl">
                     @if (searchingTrack && trackSearchResults.length === 0) {
                       @for (s of [1, 2, 3]; track s) {
@@ -293,14 +295,14 @@ interface TopSlot {
 
           <!-- Modal de Busca de Slot -->
           @if (activeSearchSlot !== null) {
-            <div class="animate-dropdown mt-6 p-4 bg-[#14181c] border border-emerald-500/30 rounded-lg">
+            <div #slotSearchContainer class="animate-dropdown mt-6 p-4 bg-[#14181c] border border-emerald-500/30 rounded-lg">
               <div class="flex items-center justify-between mb-3">
                 <span class="text-xs font-bold text-gray-200">
                   Buscando álbum para a posição {{ activeSearchSlot }}
                 </span>
                 <button
                   type="button"
-                  (click)="activeSearchSlot = null; slotSearchResults = []; searchingSlot = false"
+                  (click)="activeSearchSlot = null; slotSearchResults = []; searchingSlot = false; showSlotDropdown = false"
                   class="cursor-pointer text-xs text-gray-400 hover:text-white"
                 >
                   ✕ Fechar
@@ -310,12 +312,13 @@ interface TopSlot {
               <input
                 type="text"
                 [(ngModel)]="slotQuery"
+                (focus)="onFocusSlot()"
                 (input)="onSearchSlot()"
                 placeholder="Nome do álbum..."
                 class="w-full bg-[#1b2228] border border-[#2a343d] rounded px-3 py-2 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-emerald-500"
               />
 
-              @if (searchingSlot || slotSearchResults.length > 0) {
+              @if (showSlotDropdown && (searchingSlot || slotSearchResults.length > 0)) {
                 <div class="animate-dropdown mt-2 max-h-48 overflow-y-auto divide-y divide-[#242c34] bg-[#1b2228] border border-[#2a343d] rounded shadow-xl">
                   @if (searchingSlot && slotSearchResults.length === 0) {
                     @for (s of [1, 2, 3]; track s) {
@@ -381,6 +384,10 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
   private catalogService = inject(CatalogService);
   private router = inject(Router);
 
+  @ViewChild('favSearchContainer') favSearchContainer?: ElementRef<HTMLElement>;
+  @ViewChild('trackSearchContainer') trackSearchContainer?: ElementRef<HTMLElement>;
+  @ViewChild('slotSearchContainer') slotSearchContainer?: ElementRef<HTMLElement>;
+
   currentUsername = '';
   loading = true;
   saving = false;
@@ -391,11 +398,13 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
   favSearchQuery = '';
   favSearchResults: AlbumResponse[] = [];
   searchingFav = false;
+  showFavDropdown = false;
 
   currentTrack: CurrentTrackResponse | null = null;
   trackSearchQuery = '';
   trackSearchResults: TrackSearchResponse[] = [];
   searchingTrack = false;
+  showTrackDropdown = false;
 
   private previewAudio: HTMLAudioElement | null = null;
   isPlayingPreview = false;
@@ -411,6 +420,48 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
   slotQuery = '';
   slotSearchResults: AlbumResponse[] = [];
   searchingSlot = false;
+  showSlotDropdown = false;
+
+  @HostListener('document:mousedown', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    const target = event.target as Node;
+    if (this.favSearchContainer && !this.favSearchContainer.nativeElement.contains(target)) {
+      this.showFavDropdown = false;
+      this.searchingFav = false;
+    }
+    if (this.trackSearchContainer && !this.trackSearchContainer.nativeElement.contains(target)) {
+      this.showTrackDropdown = false;
+      this.searchingTrack = false;
+    }
+    if (this.slotSearchContainer && !this.slotSearchContainer.nativeElement.contains(target)) {
+      this.showSlotDropdown = false;
+      this.searchingSlot = false;
+    }
+  }
+
+  onFocusFav(): void {
+    this.showTrackDropdown = false;
+    this.showSlotDropdown = false;
+    if (this.favSearchQuery.trim().length > 1) {
+      this.showFavDropdown = true;
+    }
+  }
+
+  onFocusTrack(): void {
+    this.showFavDropdown = false;
+    this.showSlotDropdown = false;
+    if (this.trackSearchQuery.trim().length > 1) {
+      this.showTrackDropdown = true;
+    }
+  }
+
+  onFocusSlot(): void {
+    this.showFavDropdown = false;
+    this.showTrackDropdown = false;
+    if (this.slotQuery.trim().length > 1) {
+      this.showSlotDropdown = true;
+    }
+  }
 
   ngOnInit(): void {
     this.profileService.getMyProfile().subscribe({
@@ -441,6 +492,7 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
   onSearchFav(): void {
     const q = this.favSearchQuery.trim();
     if (q.length > 1) {
+      this.showFavDropdown = true;
       this.searchingFav = true;
       this.catalogService.search(q).subscribe({
         next: (res) => {
@@ -457,6 +509,7 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
     } else {
       this.favSearchResults = [];
       this.searchingFav = false;
+      this.showFavDropdown = false;
     }
   }
 
@@ -465,11 +518,13 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
     this.favSearchQuery = '';
     this.favSearchResults = [];
     this.searchingFav = false;
+    this.showFavDropdown = false;
   }
 
   onSearchTrack(): void {
     const q = this.trackSearchQuery.trim();
     if (q.length > 1) {
+      this.showTrackDropdown = true;
       this.searchingTrack = true;
       this.catalogService.searchTracks(q).subscribe({
         next: (res) => {
@@ -486,6 +541,7 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
     } else {
       this.trackSearchResults = [];
       this.searchingTrack = false;
+      this.showTrackDropdown = false;
     }
   }
 
@@ -501,6 +557,7 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
     this.trackSearchQuery = '';
     this.trackSearchResults = [];
     this.searchingTrack = false;
+    this.showTrackDropdown = false;
   }
 
   removeCurrentTrack(): void {
@@ -546,11 +603,13 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
     this.slotQuery = '';
     this.slotSearchResults = [];
     this.searchingSlot = false;
+    this.showSlotDropdown = false;
   }
 
   onSearchSlot(): void {
     const q = this.slotQuery.trim();
     if (q.length > 1) {
+      this.showSlotDropdown = true;
       this.searchingSlot = true;
       this.catalogService.search(q).subscribe({
         next: (res) => {
@@ -567,6 +626,7 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
     } else {
       this.slotSearchResults = [];
       this.searchingSlot = false;
+      this.showSlotDropdown = false;
     }
   }
 
@@ -580,6 +640,7 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
       this.slotQuery = '';
       this.slotSearchResults = [];
       this.searchingSlot = false;
+      this.showSlotDropdown = false;
     }
   }
 

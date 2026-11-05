@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, ElementRef, HostListener, inject, ViewChild } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { AlbumResponse } from '../../../core/models/catalog.models';
@@ -49,12 +49,13 @@ import { CatalogService } from '../../../core/services/catalog.service';
 
         <!-- Barra de busca rápida & Auth controls -->
         <div class="flex items-center gap-4">
-          <div class="relative hidden sm:block">
+          <div #searchContainer class="relative hidden sm:block">
             <form (ngSubmit)="searchFast()">
               <input
                 type="text"
                 name="searchQuery"
                 [(ngModel)]="searchQuery"
+                (focus)="onSearchFocus()"
                 (input)="onSearchInput()"
                 autocomplete="off"
                 placeholder="Buscar álbum ou artista..."
@@ -65,7 +66,7 @@ import { CatalogService } from '../../../core/services/catalog.service';
               </svg>
             </form>
 
-            @if (searchingLive || liveResults.length > 0) {
+            @if (showDropdown && (searchingLive || liveResults.length > 0)) {
               <div class="animate-dropdown absolute right-0 w-72 md:w-80 z-50 bg-[#12161a] border border-[#2a343d] rounded-lg mt-2 max-h-64 overflow-y-auto divide-y divide-[#242c34] shadow-2xl">
                 @if (searchingLive && liveResults.length === 0) {
                   @for (s of [1, 2, 3, 4]; track s) {
@@ -137,13 +138,31 @@ export class NavbarComponent {
   private catalogService = inject(CatalogService);
   private router = inject(Router);
 
+  @ViewChild('searchContainer') searchContainer?: ElementRef<HTMLElement>;
+
   searchQuery = '';
   liveResults: AlbumResponse[] = [];
   searchingLive = false;
+  showDropdown = false;
+
+  @HostListener('document:mousedown', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    if (this.searchContainer && !this.searchContainer.nativeElement.contains(event.target as Node)) {
+      this.showDropdown = false;
+      this.searchingLive = false;
+    }
+  }
+
+  onSearchFocus(): void {
+    if (this.searchQuery.trim().length > 1) {
+      this.showDropdown = true;
+    }
+  }
 
   onSearchInput(): void {
     const q = this.searchQuery.trim();
     if (q.length > 1) {
+      this.showDropdown = true;
       this.searchingLive = true;
       this.catalogService.search(q).subscribe({
         next: (res) => {
@@ -160,10 +179,12 @@ export class NavbarComponent {
     } else {
       this.liveResults = [];
       this.searchingLive = false;
+      this.showDropdown = false;
     }
   }
 
   goToAlbum(externalId: string): void {
+    this.showDropdown = false;
     this.liveResults = [];
     this.searchingLive = false;
     this.searchQuery = '';
@@ -173,6 +194,7 @@ export class NavbarComponent {
   searchFast(): void {
     if (this.searchQuery.trim()) {
       const q = this.searchQuery.trim();
+      this.showDropdown = false;
       this.liveResults = [];
       this.searchingLive = false;
       this.searchQuery = '';

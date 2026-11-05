@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, ElementRef, HostListener, inject, OnInit, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AlbumResponse } from '../../core/models/catalog.models';
@@ -27,12 +27,13 @@ import { AlbumCardComponent } from '../../shared/components/album-card/album-car
           </p>
 
           <!-- Input de Busca Rápida com Autocomplete em Tempo Real -->
-          <div class="mt-8 max-w-md mx-auto relative text-left">
+          <div #searchContainer class="mt-8 max-w-md mx-auto relative text-left">
             <form (ngSubmit)="search()" class="flex gap-2">
               <input
                 type="text"
                 name="searchQuery"
                 [(ngModel)]="searchQuery"
+                (focus)="onSearchFocus()"
                 (input)="onSearchInput()"
                 autocomplete="off"
                 placeholder="Buscar artista, banda ou álbum..."
@@ -46,7 +47,7 @@ import { AlbumCardComponent } from '../../shared/components/album-card/album-car
               </button>
             </form>
 
-            @if (searchingLive || liveResults.length > 0) {
+            @if (showDropdown && (searchingLive || liveResults.length > 0)) {
               <div class="animate-dropdown absolute left-0 right-0 z-40 bg-[#12161a] border border-[#2a343d] rounded-lg mt-1.5 max-h-64 overflow-y-auto divide-y divide-[#242c34] shadow-2xl">
                 @if (searchingLive && liveResults.length === 0) {
                   @for (s of [1, 2, 3, 4]; track s) {
@@ -134,11 +135,22 @@ export class HomeComponent implements OnInit {
   private catalogService = inject(CatalogService);
   private router = inject(Router);
 
+  @ViewChild('searchContainer') searchContainer?: ElementRef<HTMLElement>;
+
   searchQuery = '';
   liveResults: AlbumResponse[] = [];
   searchingLive = false;
+  showDropdown = false;
   featuredAlbums: AlbumResponse[] = [];
   loading = true;
+
+  @HostListener('document:mousedown', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    if (this.searchContainer && !this.searchContainer.nativeElement.contains(event.target as Node)) {
+      this.showDropdown = false;
+      this.searchingLive = false;
+    }
+  }
 
   ngOnInit(): void {
     // Busca inicial de clássicos
@@ -153,9 +165,16 @@ export class HomeComponent implements OnInit {
     });
   }
 
+  onSearchFocus(): void {
+    if (this.searchQuery.trim().length > 1) {
+      this.showDropdown = true;
+    }
+  }
+
   onSearchInput(): void {
     const q = this.searchQuery.trim();
     if (q.length > 1) {
+      this.showDropdown = true;
       this.searchingLive = true;
       this.catalogService.search(q).subscribe({
         next: (res) => {
@@ -172,10 +191,12 @@ export class HomeComponent implements OnInit {
     } else {
       this.liveResults = [];
       this.searchingLive = false;
+      this.showDropdown = false;
     }
   }
 
   goToAlbum(externalId: string): void {
+    this.showDropdown = false;
     this.liveResults = [];
     this.searchingLive = false;
     this.searchQuery = '';
@@ -185,6 +206,7 @@ export class HomeComponent implements OnInit {
   search(): void {
     if (this.searchQuery.trim()) {
       const q = this.searchQuery.trim();
+      this.showDropdown = false;
       this.liveResults = [];
       this.searchingLive = false;
       this.router.navigate(['/catalog'], { queryParams: { q } });

@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, ElementRef, HostListener, inject, OnInit, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AlbumResponse } from '../../../core/models/catalog.models';
@@ -18,12 +18,13 @@ import { AlbumCardComponent } from '../../../shared/components/album-card/album-
         <h1 class="text-3xl font-black text-white tracking-wide uppercase">Catálogo de Álbuns</h1>
         <p class="text-sm text-gray-400 mt-1">Busque milhões de discos no Spotify e adicione à sua coleção.</p>
 
-        <div class="mt-6 max-w-xl relative">
+        <div #searchContainer class="mt-6 max-w-xl relative">
           <form (ngSubmit)="onSearch()" class="flex gap-3">
             <input
               type="text"
               name="query"
               [(ngModel)]="query"
+              (focus)="onQueryFocus()"
               (input)="onQueryInput()"
               autocomplete="off"
               placeholder="Digite o nome do álbum ou artista..."
@@ -124,6 +125,8 @@ export class CatalogSearchComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
 
+  @ViewChild('searchContainer') searchContainer?: ElementRef<HTMLElement>;
+
   query = '';
   albums: AlbumResponse[] = [];
   liveResults: AlbumResponse[] = [];
@@ -132,50 +135,58 @@ export class CatalogSearchComponent implements OnInit {
   loading = false;
   searched = false;
 
+  @HostListener('document:mousedown', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    if (this.searchContainer && !this.searchContainer.nativeElement.contains(event.target as Node)) {
+      this.showDropdown = false;
+      this.searchingLive = false;
+    }
+  }
+
   ngOnInit(): void {
     this.route.queryParams.subscribe(params => {
       const q = params['q'];
       if (q) {
         this.query = q;
         this.showDropdown = false;
+        this.searchingLive = false;
         this.fetchAlbums(q);
       }
     });
   }
 
+  onQueryFocus(): void {
+    if (this.query.trim().length > 1) {
+      this.showDropdown = true;
+    }
+  }
+
   onQueryInput(): void {
     const q = this.query.trim();
+    // Enquanto digita, limpa os cards grandes para não sobrepor com o dropdown
+    this.albums = [];
+    this.searched = false;
+    this.loading = false;
+
     if (q.length > 1) {
       this.showDropdown = true;
       this.searchingLive = true;
-      this.searched = true;
-      if (this.albums.length === 0) {
-        this.loading = true;
-      }
       this.catalogService.search(q).subscribe({
         next: (results) => {
           if (this.query.trim() === q) {
             this.liveResults = results;
-            this.albums = results;
             this.searchingLive = false;
-            this.loading = false;
           }
         },
         error: () => {
           this.liveResults = [];
           this.searchingLive = false;
-          this.loading = false;
         }
       });
     } else {
       this.liveResults = [];
       this.searchingLive = false;
       this.showDropdown = false;
-      if (q.length === 0) {
-        this.albums = [];
-        this.searched = false;
-        this.loading = false;
-      }
     }
   }
 
@@ -188,10 +199,13 @@ export class CatalogSearchComponent implements OnInit {
 
   onSearch(): void {
     this.showDropdown = false;
-    if (this.query.trim()) {
+    this.searchingLive = false;
+    const q = this.query.trim();
+    if (q) {
+      this.fetchAlbums(q);
       this.router.navigate([], {
         relativeTo: this.route,
-        queryParams: { q: this.query.trim() },
+        queryParams: { q },
         queryParamsHandling: 'merge'
       });
     }
