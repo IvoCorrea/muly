@@ -27,13 +27,20 @@ import { CatalogService } from '../../../core/services/catalog.service';
             </span>
           </a>
 
-          <nav class="hidden md:flex items-center gap-6 text-sm font-semibold text-gray-400">
+          <nav class="flex items-center gap-4 md:gap-6 text-sm font-semibold text-gray-400">
             <a
               routerLink="/catalog"
               routerLinkActive="text-emerald-400"
               class="hover:text-gray-100 transition-colors uppercase tracking-wider text-xs"
             >
               Catálogo
+            </a>
+            <a
+              routerLink="/lists"
+              routerLinkActive="text-emerald-400"
+              class="hover:text-gray-100 transition-colors uppercase tracking-wider text-xs"
+            >
+              Listas
             </a>
             @if (authService.isAuthenticated()) {
               <a

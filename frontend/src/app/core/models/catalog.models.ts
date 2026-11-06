@@ -29,4 +29,5 @@ export interface TrackSearchResponse {
   albumTitle: string;
   coverUrl: string | null;
   previewUrl: string | null;
+  spotifyUrl?: string | null;
 }

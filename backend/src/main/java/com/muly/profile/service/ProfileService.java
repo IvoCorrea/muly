@@ -5,6 +5,7 @@ import com.muly.auth.service.UserService;
 import com.muly.catalog.dto.AlbumResponse;
 import com.muly.catalog.model.Album;
 import com.muly.catalog.service.CatalogService;
+import com.muly.catalog.service.SpotifyService;
 import com.muly.common.exception.ResourceNotFoundException;
 import com.muly.profile.dto.*;
 import com.muly.profile.model.TopAlbum;
@@ -22,17 +23,20 @@ public class ProfileService {
     private final UserService userService;
     private final CatalogService catalogService;
     private final ReviewService reviewService;
+    private final SpotifyService spotifyService;
 
     public ProfileService(
             TopAlbumRepository topAlbumRepository,
             UserService userService,
             CatalogService catalogService,
-            ReviewService reviewService
+            ReviewService reviewService,
+            SpotifyService spotifyService
     ) {
         this.topAlbumRepository = topAlbumRepository;
         this.userService = userService;
         this.catalogService = catalogService;
         this.reviewService = reviewService;
+        this.spotifyService = spotifyService;
     }
 
     @Transactional(readOnly = true)
@@ -57,12 +61,17 @@ public class ProfileService {
 
         CurrentTrackResponse currentTrack = null;
         if (user.getCurrentTrackTitle() != null && !user.getCurrentTrackTitle().isBlank()) {
+            String spotifyUrl = user.getCurrentTrackSpotifyUrl();
+            if (spotifyUrl == null || spotifyUrl.isBlank()) {
+                spotifyUrl = spotifyService.buildSpotifyTrackSearchUrl(user.getCurrentTrackTitle(), user.getCurrentTrackArtist());
+            }
             currentTrack = new CurrentTrackResponse(
                     user.getCurrentTrackTitle(),
                     user.getCurrentTrackArtist(),
                     user.getCurrentTrackAlbum(),
                     user.getCurrentTrackCoverUrl(),
-                    user.getCurrentTrackPreviewUrl()
+                    user.getCurrentTrackPreviewUrl(),
+                    spotifyUrl
             );
         }
 
@@ -86,12 +95,19 @@ public class ProfileService {
             user.setCurrentTrackAlbum(null);
             user.setCurrentTrackCoverUrl(null);
             user.setCurrentTrackPreviewUrl(null);
+            user.setCurrentTrackSpotifyUrl(null);
         } else {
-            user.setCurrentTrackTitle(request.title().trim());
-            user.setCurrentTrackArtist(request.artist() != null ? request.artist().trim() : null);
+            String title = request.title().trim();
+            String artist = request.artist() != null ? request.artist().trim() : null;
+            user.setCurrentTrackTitle(title);
+            user.setCurrentTrackArtist(artist);
             user.setCurrentTrackAlbum(request.albumTitle() != null ? request.albumTitle().trim() : null);
             user.setCurrentTrackCoverUrl(request.coverUrl() != null ? request.coverUrl().trim() : null);
             user.setCurrentTrackPreviewUrl(request.previewUrl() != null ? request.previewUrl().trim() : null);
+            String resolvedSpotifyUrl = (request.spotifyUrl() != null && !request.spotifyUrl().isBlank() && !request.spotifyUrl().startsWith("https://open.spotify.com/search/"))
+                    ? request.spotifyUrl().trim()
+                    : spotifyService.resolveSpotifyTrackUrl(title, artist);
+            user.setCurrentTrackSpotifyUrl(resolvedSpotifyUrl);
         }
 
         userService.save(user);

@@ -16,6 +16,9 @@ public record SetCurrentTrackRequest(
         String coverUrl,
 
         @Size(max = 1024, message = "Preview URL cannot exceed 1024 characters.")
-        String previewUrl
+        String previewUrl,
+
+        @Size(max = 1024, message = "Spotify URL cannot exceed 1024 characters.")
+        String spotifyUrl
 ) {
 }

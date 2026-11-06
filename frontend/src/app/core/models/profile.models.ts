@@ -11,6 +11,7 @@ export interface CurrentTrackResponse {
   albumTitle: string | null;
   coverUrl: string | null;
   previewUrl: string | null;
+  spotifyUrl?: string | null;
 }
 
 export interface UserProfileResponse {
@@ -32,6 +33,7 @@ export interface SetCurrentTrackRequest {
   albumTitle?: string | null;
   coverUrl?: string | null;
   previewUrl?: string | null;
+  spotifyUrl?: string | null;
 }
 
 export interface TopAlbumItemRequest {

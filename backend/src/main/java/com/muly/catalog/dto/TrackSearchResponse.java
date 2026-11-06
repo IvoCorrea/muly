@@ -5,6 +5,7 @@ public record TrackSearchResponse(
         String artist,
         String albumTitle,
         String coverUrl,
-        String previewUrl
+        String previewUrl,
+        String spotifyUrl
 ) {
 }

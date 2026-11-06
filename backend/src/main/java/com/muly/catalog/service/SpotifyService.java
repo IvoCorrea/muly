@@ -10,11 +10,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.*;
@@ -38,7 +40,9 @@ public class SpotifyService {
         this.clientId = clientId;
         this.clientSecret = clientSecret;
         this.objectMapper = new ObjectMapper();
-        this.restClient = RestClient.builder().build();
+        this.restClient = RestClient.builder()
+                .requestFactory(new SimpleClientHttpRequestFactory())
+                .build();
     }
 
     public synchronized String getAccessToken() {
@@ -216,7 +220,8 @@ public class SpotifyService {
                         coverUrl = coverUrl.replace("100x100bb", "300x300bb");
                     }
 
-                    tracks.add(new TrackSearchResponse(title, artist, albumTitle, coverUrl, previewUrl));
+                    String spotifyUrl = buildSpotifyTrackSearchUrl(title, artist);
+                    tracks.add(new TrackSearchResponse(title, artist, albumTitle, coverUrl, previewUrl, spotifyUrl));
                 }
                 if (!tracks.isEmpty()) {
                     return tracks;
@@ -245,8 +250,9 @@ public class SpotifyService {
                     String artist = item.path("artist").path("name").asText("");
                     String albumTitle = item.path("album").path("title").asText("");
                     String coverUrl = item.path("album").path("cover_medium").asText(null);
+                    String spotifyUrl = buildSpotifyTrackSearchUrl(title, artist);
 
-                    tracks.add(new TrackSearchResponse(title, artist, albumTitle, coverUrl, previewUrl));
+                    tracks.add(new TrackSearchResponse(title, artist, albumTitle, coverUrl, previewUrl, spotifyUrl));
                 }
                 return tracks;
             }
@@ -255,5 +261,44 @@ public class SpotifyService {
         }
 
         return Collections.emptyList();
+    }
+
+    public String buildSpotifyTrackSearchUrl(String title, String artist) {
+        String searchTerm = ((title != null ? title : "") + " " + (artist != null ? artist : "")).trim();
+        return "https://open.spotify.com/search/" + URLEncoder.encode(searchTerm, StandardCharsets.UTF_8).replace("+", "%20");
+    }
+
+    public String resolveSpotifyTrackUrl(String title, String artist) {
+        String searchTerm = ((title != null ? title : "") + " " + (artist != null ? artist : "")).trim();
+        String fallbackUrl = buildSpotifyTrackSearchUrl(title, artist);
+
+        String token = getAccessToken();
+        if (token == null || searchTerm.isBlank()) {
+            return fallbackUrl;
+        }
+
+        try {
+            String responseBody = restClient.get()
+                    .uri("https://api.spotify.com/v1/search?q={query}&type=track&limit=1", searchTerm)
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                    .retrieve()
+                    .body(String.class);
+
+            JsonNode root = objectMapper.readTree(responseBody);
+            JsonNode items = root.path("tracks").path("items");
+            if (items.isArray() && !items.isEmpty()) {
+                String externalUrl = items.get(0).path("external_urls").path("spotify").asText(null);
+                if (externalUrl != null && !externalUrl.isBlank()) {
+                    return externalUrl;
+                }
+                String trackId = items.get(0).path("id").asText(null);
+                if (trackId != null && !trackId.isBlank()) {
+                    return "https://open.spotify.com/track/" + trackId;
+                }
+            }
+        } catch (Exception ignored) {
+        }
+
+        return fallbackUrl;
     }
 }

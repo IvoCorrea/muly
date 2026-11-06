@@ -50,6 +50,9 @@ public class User implements UserDetails {
     @Column(name = "current_track_preview_url", length = 1024)
     private String currentTrackPreviewUrl;
 
+    @Column(name = "current_track_spotify_url", length = 1024)
+    private String currentTrackSpotifyUrl;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

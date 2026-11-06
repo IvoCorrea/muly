@@ -552,7 +552,8 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
       artist: track.artist,
       albumTitle: track.albumTitle,
       coverUrl: track.coverUrl,
-      previewUrl: track.previewUrl
+      previewUrl: track.previewUrl,
+      spotifyUrl: track.spotifyUrl || null
     };
     this.trackSearchQuery = '';
     this.trackSearchResults = [];
@@ -632,6 +633,13 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
 
   selectSlotAlbum(album: AlbumResponse): void {
     if (this.activeSearchSlot !== null) {
+      // Se o mesmo álbum já estiver em outro slot do Top 4, remove do slot antigo para evitar duplicata
+      this.topSlots.forEach(s => {
+        if (s.position !== this.activeSearchSlot && s.album?.externalId === album.externalId) {
+          s.album = null;
+        }
+      });
+
       const slot = this.topSlots.find(s => s.position === this.activeSearchSlot);
       if (slot) {
         slot.album = album;
@@ -661,7 +669,8 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
               artist: this.currentTrack.artist,
               albumTitle: this.currentTrack.albumTitle,
               coverUrl: this.currentTrack.coverUrl,
-              previewUrl: this.currentTrack.previewUrl
+              previewUrl: this.currentTrack.previewUrl,
+              spotifyUrl: this.currentTrack.spotifyUrl || null
             }
           : { title: null };
 

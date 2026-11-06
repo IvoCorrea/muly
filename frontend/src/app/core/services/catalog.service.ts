@@ -37,7 +37,8 @@ export class CatalogService {
             artist: item.artistName || '',
             albumTitle: item.collectionName || '',
             coverUrl: item.artworkUrl100 ? String(item.artworkUrl100).replace('100x100bb', '300x300bb') : null,
-            previewUrl: item.previewUrl || null
+            previewUrl: item.previewUrl || null,
+            spotifyUrl: `https://open.spotify.com/search/${encodeURIComponent(`${item.trackName || ''} ${item.artistName || ''}`.trim())}`
           }))
       ),
       catchError(() => of([]))
