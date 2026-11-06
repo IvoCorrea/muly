@@ -1,15 +1,17 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Meta, Title } from '@angular/platform-browser';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AlbumListDetailResponse } from '../../../core/models/lists.models';
 import { AuthService } from '../../../core/services/auth.service';
 import { ListsService } from '../../../core/services/lists.service';
+import { ShareCardData, ShareCardModalComponent } from '../../../shared/components/share-card-modal/share-card-modal.component';
 
 @Component({
   selector: 'app-list-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, ShareCardModalComponent],
   template: `
     <div class="max-w-3xl mx-auto px-4 py-6 pb-24">
       @if (loading) {
@@ -330,6 +332,12 @@ import { ListsService } from '../../../core/services/lists.service';
           </a>
         </div>
       }
+
+      <app-share-card-modal
+        [open]="shareModalOpen"
+        [data]="shareCardData"
+        (closed)="shareModalOpen = false"
+      />
     </div>
   `
 })
@@ -338,6 +346,8 @@ export class ListDetailComponent implements OnInit {
   private listsService = inject(ListsService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
+  private titleService = inject(Title);
+  private metaService = inject(Meta);
 
   list: AlbumListDetailResponse | null = null;
   loading = true;
@@ -348,6 +358,8 @@ export class ListDetailComponent implements OnInit {
   compactMode = true;
   showNumbers = false;
   copiedShare = false;
+  shareModalOpen = false;
+  shareCardData: ShareCardData | null = null;
 
   get isOwner(): boolean {
     return !!this.list && this.authService.currentUser()?.toLowerCase() === this.list.username.toLowerCase();
@@ -368,6 +380,15 @@ export class ListDetailComponent implements OnInit {
       next: (data) => {
         this.list = data;
         this.loading = false;
+        const title = `${data.title} — Lista por @${data.username} | Muly`;
+        this.titleService.setTitle(title);
+        this.metaService.updateTag({ property: 'og:title', content: title });
+        if (data.description) {
+          this.metaService.updateTag({ property: 'og:description', content: data.description });
+        }
+        if (data.items[0]?.album?.coverUrl) {
+          this.metaService.updateTag({ property: 'og:image', content: data.items[0].album.coverUrl });
+        }
       },
       error: () => {
         this.list = null;
@@ -443,6 +464,23 @@ export class ListDetailComponent implements OnInit {
     const url = `${window.location.origin}/lists/${this.list.id}`;
     navigator.clipboard?.writeText(url);
     this.copiedShare = true;
+
+    const covers = this.list.items
+      .map(i => i.album.coverUrl)
+      .filter((c): c is string => !!c);
+
+    this.shareCardData = {
+      type: 'list',
+      url,
+      title: this.list.title,
+      subtitle: `${this.list.items.length} ${this.list.items.length === 1 ? 'álbum' : 'álbuns'} • ♥ ${this.list.likesCount}`,
+      username: this.list.username,
+      reviewText: this.list.description,
+      coverUrl: covers[0] || null,
+      gridCovers: covers.length >= 2 ? covers : undefined
+    };
+    this.shareModalOpen = true;
+
     setTimeout(() => {
       this.copiedShare = false;
     }, 2500);

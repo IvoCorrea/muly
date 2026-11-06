@@ -2,6 +2,39 @@
   "outputDirectory": "dist/frontend/browser",
   "rewrites": [
     {
+      "source": "/profile/:username",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(WhatsApp|Discordbot|TelegramBot|Twitterbot|facebookexternalhit|LinkedInBot|Slackbot|Pinterest|Embedly|Applebot).*"
+        }
+      ],
+      "destination": "/api/og?type=profile&id=:username"
+    },
+    {
+      "source": "/catalog/albums/:spotifyId",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(WhatsApp|Discordbot|TelegramBot|Twitterbot|facebookexternalhit|LinkedInBot|Slackbot|Pinterest|Embedly|Applebot).*"
+        }
+      ],
+      "destination": "/api/og?type=album&id=:spotifyId"
+    },
+    {
+      "source": "/lists/:id",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(WhatsApp|Discordbot|TelegramBot|Twitterbot|facebookexternalhit|LinkedInBot|Slackbot|Pinterest|Embedly|Applebot).*"
+        }
+      ],
+      "destination": "/api/og?type=list&id=:id"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

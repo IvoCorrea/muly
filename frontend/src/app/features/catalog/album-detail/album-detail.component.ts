@@ -1,18 +1,20 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Meta, Title } from '@angular/platform-browser';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AlbumDetailResponse, AlbumTrackResponse } from '../../../core/models/catalog.models';
 import { AlbumReviewsSummaryResponse, ReviewResponse } from '../../../core/models/reviews.models';
 import { AuthService } from '../../../core/services/auth.service';
 import { CatalogService } from '../../../core/services/catalog.service';
 import { ReviewsService } from '../../../core/services/reviews.service';
+import { ShareCardData, ShareCardModalComponent } from '../../../shared/components/share-card-modal/share-card-modal.component';
 import { StarRatingComponent } from '../../../shared/components/star-rating/star-rating.component';
 
 @Component({
   selector: 'app-album-detail',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, StarRatingComponent],
+  imports: [CommonModule, FormsModule, RouterLink, StarRatingComponent, ShareCardModalComponent],
   template: `
     <div class="max-w-6xl mx-auto px-4 py-8">
       
@@ -431,6 +433,11 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
         </div>
       }
 
+      <app-share-card-modal
+        [open]="shareModalOpen"
+        [data]="shareCardData"
+        (closed)="shareModalOpen = false"
+      />
     </div>
   `
 })
@@ -439,6 +446,8 @@ export class AlbumDetailComponent implements OnInit {
   private catalogService = inject(CatalogService);
   private reviewsService = inject(ReviewsService);
   private route = inject(ActivatedRoute);
+  private titleService = inject(Title);
+  private metaService = inject(Meta);
 
   album: AlbumDetailResponse | null = null;
   reviewsSummary: AlbumReviewsSummaryResponse | null = null;
@@ -450,6 +459,8 @@ export class AlbumDetailComponent implements OnInit {
 
   highlightedReviewId: string | null = null;
   copiedReviewId: string | null = null;
+  shareModalOpen = false;
+  shareCardData: ShareCardData | null = null;
 
   loading = true;
   savingReview = false;
@@ -507,11 +518,49 @@ export class AlbumDetailComponent implements OnInit {
     const url = `${window.location.origin}/catalog/albums/${this.album.externalId}?review=${rev.id}`;
     navigator.clipboard?.writeText(url);
     this.copiedReviewId = rev.id;
+
+    this.shareCardData = {
+      type: 'review',
+      url,
+      title: this.album.title,
+      subtitle: this.album.artist,
+      username: rev.username,
+      rating: rev.rating,
+      reviewText: rev.reviewText,
+      trackBadge: rev.trackNumber !== null ? `Faixa #${rev.trackNumber} • ${rev.trackTitle}` : null,
+      coverUrl: this.album.coverUrl
+    };
+    this.shareModalOpen = true;
+
     setTimeout(() => {
       if (this.copiedReviewId === rev.id) {
         this.copiedReviewId = null;
       }
     }, 2500);
+  }
+
+  private updateMetaTags(): void {
+    if (!this.album) return;
+    let title = `${this.album.title} — ${this.album.artist} | Muly`;
+    let desc = `Avaliações e faixas de ${this.album.title} (${this.album.artist}) no Muly.`;
+
+    if (this.highlightedReviewId && this.reviewsSummary) {
+      const all = [...(this.reviewsSummary.reviews || []), ...(this.reviewsSummary.trackReviews || [])];
+      const rev = all.find(r => r.id === this.highlightedReviewId);
+      if (rev) {
+        title = `★ ${rev.rating.toFixed(1)}/5 — Review de @${rev.username} para ${this.album.title} | Muly`;
+        if (rev.reviewText) {
+          desc = `"${rev.reviewText}" — @${rev.username} no Muly.`;
+        }
+      }
+    }
+
+    this.titleService.setTitle(title);
+    this.metaService.updateTag({ property: 'og:title', content: title });
+    this.metaService.updateTag({ property: 'og:description', content: desc });
+    if (this.album.coverUrl) {
+      this.metaService.updateTag({ property: 'og:image', content: this.album.coverUrl });
+    }
   }
 
   loadAlbumData(spotifyId: string): void {
@@ -540,6 +589,7 @@ export class AlbumDetailComponent implements OnInit {
     this.reviewsService.getReviewsByAlbum(spotifyId).subscribe({
       next: (summary) => {
         this.reviewsSummary = summary;
+        this.updateMetaTags();
         if (this.highlightedReviewId) {
           this.reviewFilter = 'all';
           setTimeout(() => {

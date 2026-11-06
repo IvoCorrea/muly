@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, OnDestroy, OnInit } from '@angular/core';
+import { Meta, Title } from '@angular/platform-browser';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AlbumListSummaryResponse } from '../../../core/models/lists.models';
 import { UserProfileResponse } from '../../../core/models/profile.models';
@@ -10,12 +11,13 @@ import { ListsService } from '../../../core/services/lists.service';
 import { ProfileService } from '../../../core/services/profile.service';
 import { ReviewsService } from '../../../core/services/reviews.service';
 import { AlbumCardComponent } from '../../../shared/components/album-card/album-card.component';
+import { ShareCardData, ShareCardModalComponent } from '../../../shared/components/share-card-modal/share-card-modal.component';
 import { StarRatingComponent } from '../../../shared/components/star-rating/star-rating.component';
 
 @Component({
   selector: 'app-profile-view',
   standalone: true,
-  imports: [CommonModule, RouterLink, AlbumCardComponent, StarRatingComponent],
+  imports: [CommonModule, RouterLink, AlbumCardComponent, StarRatingComponent, ShareCardModalComponent],
   template: `
     <div class="max-w-6xl mx-auto px-4 py-8">
       
@@ -30,7 +32,19 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
         
         <!-- Header do Perfil -->
         <div class="bg-[#1b2228] border border-[#2a343d] rounded-xl p-6 sm:p-8 mb-10 shadow-lg relative overflow-hidden">
-          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 relative z-10">
+          <!-- Ícone Compartilhar Perfil no Canto Superior Direito -->
+          <button
+            type="button"
+            (click)="shareProfile()"
+            class="cursor-pointer absolute top-3 right-3 z-20 w-8 h-8 rounded-lg bg-[#12161a]/90 hover:bg-[#242c34] border border-[#2a343d] hover:border-emerald-500/50 flex items-center justify-center text-gray-400 hover:text-emerald-400 transition-all shadow"
+            title="Compartilhar perfil"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+            </svg>
+          </button>
+
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 relative z-10 pr-6 sm:pr-8">
             
             <div class="flex items-center gap-5">
               <div class="w-20 h-20 rounded-full bg-[#12161a] border-2 border-emerald-500 flex items-center justify-center text-white font-black text-2xl uppercase shadow-md">
@@ -56,29 +70,14 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
               </div>
             </div>
 
-            <div class="flex flex-wrap items-center gap-3">
-              <!-- Botão Compartilhar Perfil -->
-              <button
-                type="button"
-                (click)="shareProfile()"
-                class="cursor-pointer inline-flex items-center gap-2 bg-[#12161a] hover:bg-[#242c34] text-gray-200 border border-[#2a343d] font-bold text-xs uppercase tracking-wider px-4 py-2.5 rounded-lg transition-colors shadow"
-                title="Copiar link de compartilhamento do perfil"
+            @if (isOwnProfile) {
+              <a
+                routerLink="/profile/me/edit"
+                class="bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs uppercase tracking-wider px-5 py-2.5 rounded-lg transition-colors shadow-md"
               >
-                <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                </svg>
-                <span>{{ copiedProfileLink ? 'Link Copiado! ✓' : 'Compartilhar Perfil' }}</span>
-              </button>
-
-              @if (isOwnProfile) {
-                <a
-                  routerLink="/profile/me/edit"
-                  class="bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs uppercase tracking-wider px-5 py-2.5 rounded-lg transition-colors shadow-md"
-                >
-                  Customizar Perfil
-                </a>
-              }
-            </div>
+                Customizar Perfil
+              </a>
+            }
           </div>
         </div>
 
@@ -418,6 +417,11 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
         </div>
       }
 
+      <app-share-card-modal
+        [open]="shareModalOpen"
+        [data]="shareCardData"
+        (closed)="shareModalOpen = false"
+      />
     </div>
   `
 })
@@ -428,6 +432,8 @@ export class ProfileViewComponent implements OnInit, OnDestroy {
   private listsService = inject(ListsService);
   private catalogService = inject(CatalogService);
   private route = inject(ActivatedRoute);
+  private titleService = inject(Title);
+  private metaService = inject(Meta);
 
   profile: UserProfileResponse | null = null;
   userReviews: ReviewResponse[] = [];
@@ -436,6 +442,8 @@ export class ProfileViewComponent implements OnInit, OnDestroy {
 
   copiedProfileLink = false;
   copiedReviewId: string | null = null;
+  shareModalOpen = false;
+  shareCardData: ShareCardData | null = null;
 
   private audioPlayer: HTMLAudioElement | null = null;
   isPlaying = false;
@@ -471,6 +479,7 @@ export class ProfileViewComponent implements OnInit, OnDestroy {
     this.profileService.getProfile(username).subscribe({
       next: (data) => {
         this.profile = data;
+        this.updateMetaTags(data);
         this.loadLists(username);
         this.loadReviews(username);
       },
@@ -479,6 +488,19 @@ export class ProfileViewComponent implements OnInit, OnDestroy {
         this.loading = false;
       }
     });
+  }
+
+  private updateMetaTags(profile: UserProfileResponse): void {
+    const title = `@${profile.username} no Muly (${profile.totalReviews} avaliações)`;
+    const desc = profile.favoriteAlbum
+      ? `Álbum favorito: ${profile.favoriteAlbum.title} (${profile.favoriteAlbum.artist}) • Confira o perfil musical de @${profile.username} no Muly.`
+      : `Confira o perfil musical, avaliações e listas de @${profile.username} no Muly.`;
+    const img = profile.favoriteAlbum?.coverUrl || profile.topAlbums?.[0]?.album?.coverUrl || 'https://muly.xyz/logo-emerald.png';
+
+    this.titleService.setTitle(title);
+    this.metaService.updateTag({ property: 'og:title', content: title });
+    this.metaService.updateTag({ property: 'og:description', content: desc });
+    this.metaService.updateTag({ property: 'og:image', content: img });
   }
 
   loadLists(username: string): void {
@@ -519,6 +541,28 @@ export class ProfileViewComponent implements OnInit, OnDestroy {
     const url = `${window.location.origin}/profile/${this.profile.username}`;
     navigator.clipboard?.writeText(url);
     this.copiedProfileLink = true;
+
+    const topCovers = (this.profile.topAlbums || [])
+      .map(t => t.album.coverUrl)
+      .filter((c): c is string => !!c);
+
+    this.shareCardData = {
+      type: 'profile',
+      url,
+      title: `@${this.profile.username}`,
+      subtitle: this.profile.favoriteAlbum
+        ? `★ ${this.profile.favoriteAlbum.title} — ${this.profile.favoriteAlbum.artist}`
+        : 'Perfil Musical no Muly',
+      username: this.profile.username,
+      coverUrl: this.profile.favoriteAlbum?.coverUrl || null,
+      gridCovers: topCovers.length >= 2 ? topCovers : undefined,
+      reviewText: this.profile.currentTrack
+        ? `Ouvindo agora: ${this.profile.currentTrack.title} (${this.profile.currentTrack.artist || ''})`
+        : null,
+      statsText: `${this.profile.totalReviews} ${this.profile.totalReviews === 1 ? 'avaliação publicada' : 'avaliações publicadas'} • ${this.userLists.length} ${this.userLists.length === 1 ? 'lista' : 'listas'}`
+    };
+    this.shareModalOpen = true;
+
     setTimeout(() => {
       this.copiedProfileLink = false;
     }, 2500);
@@ -528,6 +572,20 @@ export class ProfileViewComponent implements OnInit, OnDestroy {
     const url = `${window.location.origin}/catalog/albums/${rev.albumExternalId}?review=${rev.id}`;
     navigator.clipboard?.writeText(url);
     this.copiedReviewId = rev.id;
+
+    this.shareCardData = {
+      type: 'review',
+      url,
+      title: rev.albumTitle,
+      subtitle: rev.albumArtist,
+      username: rev.username,
+      rating: rev.rating,
+      reviewText: rev.reviewText,
+      trackBadge: rev.trackNumber !== null ? `Faixa #${rev.trackNumber} • ${rev.trackTitle}` : null,
+      coverUrl: rev.albumCoverUrl
+    };
+    this.shareModalOpen = true;
+
     setTimeout(() => {
       if (this.copiedReviewId === rev.id) {
         this.copiedReviewId = null;
