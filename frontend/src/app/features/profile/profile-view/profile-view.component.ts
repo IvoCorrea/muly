@@ -454,21 +454,25 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
           @if (userReviews.length > 0) {
             <div class="space-y-4">
               @for (rev of userReviews; track rev.id) {
-                <div class="bg-[#1b2228] border border-[#2a343d] rounded-lg p-5 flex flex-col sm:flex-row gap-5 items-start">
+                <div
+                  (click)="openReview(rev)"
+                  class="cursor-pointer group/rev bg-[#1b2228] border border-[#2a343d] hover:border-emerald-500/50 hover:bg-[#1e262d] rounded-lg p-5 flex flex-col sm:flex-row gap-5 items-start transition-all"
+                >
                   @if (rev.albumCoverUrl) {
-                    <a [routerLink]="['/catalog/albums', rev.albumExternalId]" class="shrink-0">
+                    <a
+                      [routerLink]="['/catalog/albums', rev.albumExternalId]"
+                      (click)="$event.stopPropagation()"
+                      class="shrink-0"
+                    >
                       <img [src]="rev.albumCoverUrl" [alt]="rev.albumTitle" class="w-16 h-16 rounded object-cover shadow border border-[#2a343d]" />
                     </a>
                   }
                   <div class="flex-1 w-full">
                     <div class="flex flex-wrap items-center justify-between gap-2">
                       <div class="flex flex-wrap items-center gap-2">
-                        <a
-                          [routerLink]="['/catalog/albums', rev.albumExternalId]"
-                          class="font-bold text-sm text-gray-100 hover:text-emerald-400 transition-colors"
-                        >
+                        <span class="font-bold text-sm text-gray-100 group-hover/rev:text-emerald-400 transition-colors">
                           {{ rev.albumTitle }}
-                        </a>
+                        </span>
                         <span class="text-xs text-gray-400">por {{ rev.albumArtist }}</span>
                         @if (rev.trackNumber !== null) {
                           <span class="text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full">
@@ -489,29 +493,30 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                       </p>
                     }
 
-                    <div class="flex flex-wrap items-center justify-between gap-2 mt-3 pt-2 border-t border-[#242c34]/60">
-                      <div class="flex items-center gap-4">
+                    <div class="flex flex-wrap items-center justify-between gap-2 mt-4 pt-3 border-t border-[#242c34]/60">
+                      <div class="flex items-center gap-2.5">
                         <button
                           type="button"
-                          (click)="toggleLikeReview(rev)"
-                          class="cursor-pointer inline-flex items-center gap-1.5 text-xs font-bold transition-colors"
-                          [ngClass]="rev.likedByMe ? 'text-rose-400' : 'text-gray-400 hover:text-rose-400'"
+                          (click)="toggleLikeReview(rev, $event)"
+                          class="cursor-pointer min-h-[42px] px-4 py-2 rounded-full text-sm font-black inline-flex items-center gap-2 border transition-all active:scale-95"
+                          [ngClass]="rev.likedByMe
+                            ? 'bg-rose-500/20 border-rose-500/50 text-rose-400 shadow-sm'
+                            : 'bg-[#14181c] border-[#2a343d] text-gray-300 hover:border-rose-500/40 hover:text-rose-400'"
                         >
-                          <span>{{ rev.likedByMe ? '♥' : '♡' }}</span>
+                          <span class="text-base leading-none">{{ rev.likedByMe ? '♥' : '♡' }}</span>
                           <span>{{ rev.likesCount || 0 }}</span>
                         </button>
 
                         <button
                           type="button"
-                          (click)="toggleCommentsDrawer(rev.id)"
-                          class="cursor-pointer inline-flex items-center gap-1.5 text-xs font-bold transition-colors"
-                          [ngClass]="openCommentsMap[rev.id] ? 'text-emerald-400' : 'text-gray-400 hover:text-emerald-400'"
+                          (click)="openReviewComments(rev, $event)"
+                          class="cursor-pointer min-h-[42px] px-4 py-2 rounded-full text-sm font-bold inline-flex items-center gap-2 bg-[#14181c] border border-[#2a343d] text-gray-300 hover:border-emerald-500/40 hover:text-emerald-400 transition-all active:scale-95"
                         >
-                          <span>💬</span>
+                          <span class="text-sm leading-none">💬</span>
                           <span>{{ rev.commentsCount || (rev.comments?.length || 0) }}</span>
                         </button>
 
-                        <span class="text-[10px] text-gray-500">
+                        <span class="text-[10px] text-gray-500 ml-1">
                           • {{ formatDate(rev.createdAt) }}
                         </span>
                       </div>
@@ -521,6 +526,7 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                           [href]="'https://open.spotify.com/album/' + rev.albumExternalId"
                           target="_blank"
                           rel="noopener noreferrer"
+                          (click)="$event.stopPropagation()"
                           class="inline-flex items-center gap-1 text-[11px] font-semibold text-[#1DB954] hover:underline"
                           title="Abrir no Spotify"
                         >
@@ -532,7 +538,7 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
 
                         <button
                           type="button"
-                          (click)="shareReview(rev)"
+                          (click)="shareReview(rev, $event)"
                           class="cursor-pointer inline-flex items-center gap-1 text-[11px] font-semibold text-gray-400 hover:text-emerald-400 transition-colors"
                           title="Copiar link de compartilhamento desta review"
                         >
@@ -543,70 +549,6 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                         </button>
                       </div>
                     </div>
-
-                    @if (openCommentsMap[rev.id]) {
-                      <div class="mt-3 pt-3 border-t border-[#242c34] space-y-2.5">
-                        @if (rev.comments && rev.comments.length > 0) {
-                          <div class="space-y-2">
-                            @for (c of rev.comments; track c.id) {
-                              <div class="bg-[#14181c] border border-[#242c34] rounded-lg p-2.5 flex items-start justify-between gap-2">
-                                <div class="flex items-start gap-2 min-w-0">
-                                  <a
-                                    [routerLink]="['/profile', c.username]"
-                                    class="w-5 h-5 rounded-full bg-[#1b2228] border border-emerald-500/40 overflow-hidden flex items-center justify-center text-[9px] font-black text-white uppercase shrink-0 mt-0.5"
-                                  >
-                                    @if (c.userAvatarUrl) {
-                                      <img [src]="c.userAvatarUrl" [alt]="c.username" class="w-full h-full object-cover" />
-                                    } @else {
-                                      {{ (c.userDisplayName || c.username).substring(0, 2) }}
-                                    }
-                                  </a>
-                                  <div class="min-w-0">
-                                    <div class="flex items-center gap-2">
-                                      <a [routerLink]="['/profile', c.username]" class="text-[11px] font-bold text-emerald-400 hover:underline">
-                                        {{ c.userDisplayName || c.username }}
-                                      </a>
-                                      <span class="text-[10px] text-gray-500">{{ formatDate(c.createdAt) }}</span>
-                                    </div>
-                                    <p class="text-xs text-gray-200 mt-0.5 break-words">{{ c.content }}</p>
-                                  </div>
-                                </div>
-                                @if (canDeleteComment(c.username, rev.username)) {
-                                  <button
-                                    type="button"
-                                    (click)="deleteReviewComment(rev, c.id)"
-                                    class="cursor-pointer text-[11px] text-gray-500 hover:text-red-400 px-1"
-                                  >
-                                    ✕
-                                  </button>
-                                }
-                              </div>
-                            }
-                          </div>
-                        } @else {
-                          <p class="text-[11px] text-gray-500">Nenhum comentário ainda.</p>
-                        }
-
-                        @if (authService.isAuthenticated()) {
-                          <form (ngSubmit)="submitReviewComment(rev)" class="flex gap-2 pt-1">
-                            <input
-                              type="text"
-                              [name]="'prof-comment-' + rev.id"
-                              [(ngModel)]="commentInputs[rev.id]"
-                              placeholder="Comentar nesta avaliação..."
-                              class="flex-1 bg-[#12161a] border border-[#2a343d] rounded px-3 py-1.5 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-emerald-500"
-                            />
-                            <button
-                              type="submit"
-                              [disabled]="!commentInputs[rev.id]?.trim()"
-                              class="cursor-pointer disabled:opacity-50 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-[11px] uppercase tracking-wider px-3 py-1.5 rounded transition-colors"
-                            >
-                              Enviar
-                            </button>
-                          </form>
-                        }
-                      </div>
-                    }
                   </div>
                 </div>
               }
@@ -856,7 +798,23 @@ export class ProfileViewComponent implements OnInit, OnDestroy {
     return 'bg-sky-400';
   }
 
-  toggleLikeReview(rev: ReviewResponse): void {
+  openReview(rev: ReviewResponse): void {
+    this.router.navigate(['/reviews', rev.id], {
+      queryParams: { album: rev.albumExternalId },
+      state: { review: rev }
+    });
+  }
+
+  openReviewComments(rev: ReviewResponse, event?: Event): void {
+    event?.stopPropagation();
+    this.router.navigate(['/reviews', rev.id], {
+      queryParams: { album: rev.albumExternalId, focus: 'comment' },
+      state: { review: rev }
+    });
+  }
+
+  toggleLikeReview(rev: ReviewResponse, event?: Event): void {
+    event?.stopPropagation();
     if (!this.authService.isAuthenticated()) {
       this.router.navigate(['/login']);
       return;
@@ -865,38 +823,6 @@ export class ProfileViewComponent implements OnInit, OnDestroy {
       next: (updated) => {
         rev.likedByMe = updated.likedByMe;
         rev.likesCount = updated.likesCount;
-      }
-    });
-  }
-
-  toggleCommentsDrawer(reviewId: string): void {
-    this.openCommentsMap[reviewId] = !this.openCommentsMap[reviewId];
-  }
-
-  submitReviewComment(rev: ReviewResponse): void {
-    const text = (this.commentInputs[rev.id] || '').trim();
-    if (!text) return;
-
-    this.reviewsService.addComment(rev.id, { content: text }).subscribe({
-      next: (comment) => {
-        rev.comments = [...(rev.comments || []), comment];
-        rev.commentsCount = rev.comments.length;
-        this.commentInputs[rev.id] = '';
-      }
-    });
-  }
-
-  canDeleteComment(commentAuthor: string, reviewOwner: string): boolean {
-    const current = this.authService.currentUser()?.toLowerCase();
-    if (!current) return false;
-    return current === commentAuthor.toLowerCase() || current === reviewOwner.toLowerCase();
-  }
-
-  deleteReviewComment(rev: ReviewResponse, commentId: string): void {
-    this.reviewsService.deleteComment(rev.id, commentId).subscribe({
-      next: () => {
-        rev.comments = (rev.comments || []).filter(c => c.id !== commentId);
-        rev.commentsCount = rev.comments.length;
       }
     });
   }
@@ -981,8 +907,9 @@ export class ProfileViewComponent implements OnInit, OnDestroy {
     }, 2500);
   }
 
-  shareReview(rev: ReviewResponse): void {
-    const url = `${window.location.origin}/catalog/albums/${rev.albumExternalId}?review=${rev.id}`;
+  shareReview(rev: ReviewResponse, event?: Event): void {
+    event?.stopPropagation();
+    const url = `${window.location.origin}/reviews/${rev.id}`;
     navigator.clipboard?.writeText(url);
     this.copiedReviewId = rev.id;
 

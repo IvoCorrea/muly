@@ -17,6 +17,9 @@ export interface ReviewResponse {
   username: string;
   userDisplayName?: string | null;
   userAvatarUrl?: string | null;
+  userBio?: string | null;
+  userSpotifyUrl?: string | null;
+  userLastfmUrl?: string | null;
   albumExternalId: string;
   albumTitle: string;
   albumArtist: string;

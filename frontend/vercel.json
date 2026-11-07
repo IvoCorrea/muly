@@ -24,6 +24,17 @@
       "destination": "/api/og?type=album&id=:spotifyId"
     },
     {
+      "source": "/reviews/:id",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(WhatsApp|Discordbot|TelegramBot|Twitterbot|facebookexternalhit|LinkedInBot|Slackbot|Pinterest|Embedly|Applebot).*"
+        }
+      ],
+      "destination": "/api/og?type=review&id=:id"
+    },
+    {
       "source": "/lists/:id",
       "has": [
         {

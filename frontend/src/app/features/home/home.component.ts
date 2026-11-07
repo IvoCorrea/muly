@@ -161,12 +161,16 @@ import { StarRatingComponent } from '../../shared/components/star-rating/star-ra
         } @else if (feedReviews.length > 0) {
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             @for (rev of feedReviews; track rev.id) {
-              <div class="bg-[#1b2228] border border-[#2a343d] hover:border-[#374450] rounded-xl p-5 flex flex-col justify-between transition-all shadow">
+              <div
+                (click)="openReview(rev)"
+                class="cursor-pointer group/card bg-[#1b2228] border border-[#2a343d] hover:border-emerald-500/50 hover:bg-[#1e262d] rounded-xl p-5 flex flex-col justify-between transition-all shadow"
+              >
                 <div>
                   <!-- Cabeçalho do Autor -->
                   <div class="flex items-center justify-between gap-2 mb-3">
                     <a
                       [routerLink]="['/profile', rev.username]"
+                      (click)="$event.stopPropagation()"
                       class="inline-flex items-center gap-2 group min-w-0"
                     >
                       <span class="w-7 h-7 rounded-full bg-[#12161a] border border-emerald-500/60 overflow-hidden flex items-center justify-center text-[10px] font-black text-white uppercase shrink-0">
@@ -187,16 +191,14 @@ import { StarRatingComponent } from '../../shared/components/star-rating/star-ra
                     <app-star-rating [rating]="rev.rating" [readonly]="true" />
                   </div>
 
-                  <!-- Álbum / Música Avaliada -->
-                  <div class="flex items-start gap-3.5 bg-[#14181c] border border-[#242c34] rounded-lg p-3">
+                  <!-- Álbum / Música Avaliada (Clicável junto com o Card) -->
+                  <div class="flex items-start gap-3.5 bg-[#14181c] border border-[#242c34] group-hover/card:border-[#2f3b47] rounded-lg p-3 transition-colors">
                     @if (rev.albumCoverUrl) {
-                      <a [routerLink]="['/catalog/albums', rev.albumExternalId]" class="shrink-0">
-                        <img
-                          [src]="rev.albumCoverUrl"
-                          [alt]="rev.albumTitle"
-                          class="w-14 h-14 rounded object-cover shadow border border-[#2a343d]"
-                        />
-                      </a>
+                      <img
+                        [src]="rev.albumCoverUrl"
+                        [alt]="rev.albumTitle"
+                        class="w-14 h-14 rounded object-cover shadow border border-[#2a343d] shrink-0"
+                      />
                     }
                     <div class="min-w-0 flex-1">
                       <div class="flex flex-wrap items-center gap-1.5">
@@ -210,12 +212,9 @@ import { StarRatingComponent } from '../../shared/components/star-rating/star-ra
                           </span>
                         }
                       </div>
-                      <a
-                        [routerLink]="['/catalog/albums', rev.albumExternalId]"
-                        class="block font-black text-sm text-white hover:text-emerald-400 transition-colors truncate mt-1"
-                      >
+                      <p class="font-black text-sm text-white group-hover/card:text-emerald-400 transition-colors truncate mt-1">
                         {{ rev.albumTitle }}
-                      </a>
+                      </p>
                       <p class="text-xs text-gray-400 truncate">{{ rev.albumArtist }}</p>
                     </div>
                   </div>
@@ -227,92 +226,43 @@ import { StarRatingComponent } from '../../shared/components/star-rating/star-ra
                   }
                 </div>
 
-                <!-- Rodapé de Interação do Card -->
+                <!-- Rodapé de Interação do Card (Botões Grandes para Mobile) -->
                 <div class="mt-4 pt-3 border-t border-[#242c34]">
-                  <div class="flex items-center justify-between text-xs">
-                    <div class="flex items-center gap-4">
+                  <div class="flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-2.5">
+                      <!-- Botão de Like Grande para Mobile -->
                       <button
                         type="button"
-                        (click)="toggleLikeReview(rev)"
-                        class="cursor-pointer inline-flex items-center gap-1.5 font-bold transition-colors"
-                        [ngClass]="rev.likedByMe ? 'text-rose-400' : 'text-gray-400 hover:text-rose-400'"
+                        (click)="toggleLikeReview(rev, $event)"
+                        class="cursor-pointer min-h-[42px] px-4 py-2 rounded-full text-sm font-black inline-flex items-center gap-2 border transition-all active:scale-95"
+                        [ngClass]="rev.likedByMe
+                          ? 'bg-rose-500/20 border-rose-500/50 text-rose-400 shadow-sm'
+                          : 'bg-[#14181c] border-[#2a343d] text-gray-300 hover:border-rose-500/40 hover:text-rose-400'"
+                        title="Curtir avaliação"
                       >
-                        <span>{{ rev.likedByMe ? '♥' : '♡' }}</span>
+                        <span class="text-base leading-none">{{ rev.likedByMe ? '♥' : '♡' }}</span>
                         <span>{{ rev.likesCount || 0 }}</span>
                       </button>
 
+                      <!-- Botão de Comentário que leva direto para a página da review focando no input -->
                       <button
                         type="button"
-                        (click)="toggleCommentsDrawer(rev.id)"
-                        class="cursor-pointer inline-flex items-center gap-1.5 font-bold transition-colors"
-                        [ngClass]="openCommentsMap[rev.id] ? 'text-emerald-400' : 'text-gray-400 hover:text-emerald-400'"
+                        (click)="openReviewComments(rev, $event)"
+                        class="cursor-pointer min-h-[42px] px-4 py-2 rounded-full text-sm font-bold inline-flex items-center gap-2 bg-[#14181c] border border-[#2a343d] text-gray-300 hover:border-emerald-500/40 hover:text-emerald-400 transition-all active:scale-95"
+                        title="Ver e adicionar comentários"
                       >
-                        <span>💬</span>
+                        <span class="text-sm leading-none">💬</span>
                         <span>{{ rev.commentsCount || (rev.comments?.length || 0) }}</span>
                       </button>
                     </div>
 
                     <div class="flex items-center gap-3">
                       <span class="text-[10px] text-gray-500">{{ formatDate(rev.createdAt) }}</span>
-                      <a
-                        [routerLink]="['/catalog/albums', rev.albumExternalId]"
-                        [queryParams]="{ review: rev.id }"
-                        class="text-[11px] font-bold text-emerald-400 hover:underline"
-                      >
+                      <span class="text-xs font-bold text-emerald-400 group-hover/card:underline">
                         Ver →
-                      </a>
+                      </span>
                     </div>
                   </div>
-
-                  <!-- Gaveta de Comentários no Feed -->
-                  @if (openCommentsMap[rev.id]) {
-                    <div class="mt-3 pt-3 border-t border-[#242c34] space-y-2">
-                      @if (rev.comments && rev.comments.length > 0) {
-                        <div class="space-y-1.5 max-h-40 overflow-y-auto">
-                          @for (c of rev.comments; track c.id) {
-                            <div class="bg-[#14181c] border border-[#242c34] rounded p-2 flex items-start justify-between gap-2 text-xs">
-                              <div class="min-w-0">
-                                <a [routerLink]="['/profile', c.username]" class="font-bold text-emerald-400 hover:underline mr-1.5">
-                                  &#64;{{ c.username }}:
-                                </a>
-                                <span class="text-gray-200 break-words">{{ c.content }}</span>
-                              </div>
-                              @if (canDeleteComment(c.username, rev.username)) {
-                                <button
-                                  type="button"
-                                  (click)="deleteReviewComment(rev, c.id)"
-                                  class="cursor-pointer text-[10px] text-gray-500 hover:text-red-400 px-1 shrink-0"
-                                >
-                                  ✕
-                                </button>
-                              }
-                            </div>
-                          }
-                        </div>
-                      } @else {
-                        <p class="text-[11px] text-gray-500">Seja o primeiro a comentar!</p>
-                      }
-
-                      @if (authService.isAuthenticated()) {
-                        <form (ngSubmit)="submitReviewComment(rev)" class="flex gap-2 pt-1">
-                          <input
-                            type="text"
-                            [name]="'feed-comment-' + rev.id"
-                            [(ngModel)]="commentInputs[rev.id]"
-                            placeholder="Adicionar comentário..."
-                            class="flex-1 bg-[#12161a] border border-[#2a343d] rounded px-2.5 py-1.5 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-emerald-500"
-                          />
-                          <button
-                            type="submit"
-                            [disabled]="!commentInputs[rev.id]?.trim()"
-                            class="cursor-pointer disabled:opacity-50 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-[11px] uppercase tracking-wider px-3 py-1.5 rounded transition-colors"
-                          >
-                            Enviar
-                          </button>
-                        </form>
-                      }
-                    </div>
-                  }
                 </div>
               </div>
             }
@@ -435,7 +385,23 @@ export class HomeComponent implements OnInit {
     });
   }
 
-  toggleLikeReview(rev: ReviewResponse): void {
+  openReview(rev: ReviewResponse): void {
+    this.router.navigate(['/reviews', rev.id], {
+      queryParams: { album: rev.albumExternalId },
+      state: { review: rev }
+    });
+  }
+
+  openReviewComments(rev: ReviewResponse, event?: Event): void {
+    event?.stopPropagation();
+    this.router.navigate(['/reviews', rev.id], {
+      queryParams: { album: rev.albumExternalId, focus: 'comment' },
+      state: { review: rev }
+    });
+  }
+
+  toggleLikeReview(rev: ReviewResponse, event?: Event): void {
+    event?.stopPropagation();
     if (!this.authService.isAuthenticated()) {
       this.router.navigate(['/login']);
       return;
@@ -444,38 +410,6 @@ export class HomeComponent implements OnInit {
       next: (updated) => {
         rev.likedByMe = updated.likedByMe;
         rev.likesCount = updated.likesCount;
-      }
-    });
-  }
-
-  toggleCommentsDrawer(reviewId: string): void {
-    this.openCommentsMap[reviewId] = !this.openCommentsMap[reviewId];
-  }
-
-  submitReviewComment(rev: ReviewResponse): void {
-    const text = (this.commentInputs[rev.id] || '').trim();
-    if (!text) return;
-
-    this.reviewsService.addComment(rev.id, { content: text }).subscribe({
-      next: (comment) => {
-        rev.comments = [...(rev.comments || []), comment];
-        rev.commentsCount = rev.comments.length;
-        this.commentInputs[rev.id] = '';
-      }
-    });
-  }
-
-  canDeleteComment(commentAuthor: string, reviewOwner: string): boolean {
-    const current = this.authService.currentUser()?.toLowerCase();
-    if (!current) return false;
-    return current === commentAuthor.toLowerCase() || current === reviewOwner.toLowerCase();
-  }
-
-  deleteReviewComment(rev: ReviewResponse, commentId: string): void {
-    this.reviewsService.deleteComment(rev.id, commentId).subscribe({
-      next: () => {
-        rev.comments = (rev.comments || []).filter(c => c.id !== commentId);
-        rev.commentsCount = rev.comments.length;
       }
     });
   }

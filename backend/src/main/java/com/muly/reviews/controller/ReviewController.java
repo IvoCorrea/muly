@@ -86,6 +86,15 @@ public class ReviewController {
         return ResponseEntity.ok(reviewService.getFeed(tab, viewer));
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<ReviewResponse> getReviewById(
+            @PathVariable UUID id,
+            Principal principal
+    ) {
+        String viewer = principal != null ? principal.getName() : null;
+        return ResponseEntity.ok(reviewService.getReviewById(id, viewer));
+    }
+
     @GetMapping("/album/{externalId}")
     public ResponseEntity<AlbumReviewsSummaryResponse> getReviewsByAlbum(
             @PathVariable String externalId,

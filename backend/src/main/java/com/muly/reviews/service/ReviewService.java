@@ -214,7 +214,7 @@ public class ReviewService {
                     actor,
                     "REVIEW_LIKE",
                     "curtiu sua avaliação de " + albumTitle,
-                    "/catalog/albums/" + albumExternalId + "?review=" + reviewId
+                    "/reviews/" + reviewId
             );
         }
         reviewLikeRepository.flush();
@@ -262,7 +262,7 @@ public class ReviewService {
                 actor,
                 "REVIEW_COMMENT",
                 "comentou na sua avaliação de " + albumTitle + ": \"" + snippet + "\"",
-                "/catalog/albums/" + albumExternalId + "?review=" + reviewId
+                "/reviews/" + reviewId
         );
 
         return new ReviewCommentResponse(
@@ -451,6 +451,23 @@ public class ReviewService {
     }
 
     @Transactional(readOnly = true)
+    public ReviewResponse getReviewById(UUID reviewId, String viewerUsername) {
+        String normViewer = (viewerUsername != null && !viewerUsername.isBlank())
+                ? viewerUsername.trim().toLowerCase(Locale.ROOT)
+                : null;
+
+        Optional<Review> reviewOpt = reviewRepository.findById(reviewId);
+        if (reviewOpt.isPresent()) {
+            return toResponse(reviewOpt.get(), normViewer);
+        }
+
+        TrackReview trackReview = trackReviewRepository.findById(reviewId)
+                .orElseThrow(() -> new ResourceNotFoundException("Review not found with id: " + reviewId));
+
+        return toTrackResponse(trackReview, normViewer);
+    }
+
+    @Transactional(readOnly = true)
     public long countReviewsByUser(String username) {
         String normalized = username.toLowerCase(Locale.ROOT);
         return reviewRepository.countByUserUsername(normalized) + trackReviewRepository.countByUserUsername(normalized);
@@ -476,6 +493,9 @@ public class ReviewService {
                 review.getUser().getUsername(),
                 review.getUser().getDisplayName(),
                 review.getUser().getAvatarUrl(),
+                review.getUser().getBio(),
+                review.getUser().getSpotifyProfileUrl(),
+                review.getUser().getLastfmProfileUrl(),
                 review.getAlbum().getExternalId(),
                 review.getAlbum().getTitle(),
                 review.getAlbum().getArtist(),
@@ -514,6 +534,9 @@ public class ReviewService {
                 trackReview.getUser().getUsername(),
                 trackReview.getUser().getDisplayName(),
                 trackReview.getUser().getAvatarUrl(),
+                trackReview.getUser().getBio(),
+                trackReview.getUser().getSpotifyProfileUrl(),
+                trackReview.getUser().getLastfmProfileUrl(),
                 trackReview.getAlbum().getExternalId(),
                 trackReview.getAlbum().getTitle(),
                 trackReview.getAlbum().getArtist(),

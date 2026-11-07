@@ -10,6 +10,7 @@ import { ListFormComponent } from './features/lists/list-form/list-form.componen
 import { ListsBrowseComponent } from './features/lists/lists-browse/lists-browse.component';
 import { ProfileEditComponent } from './features/profile/profile-edit/profile-edit.component';
 import { ProfileViewComponent } from './features/profile/profile-view/profile-view.component';
+import { ReviewDetailComponent } from './features/reviews/review-detail/review-detail.component';
 
 export const routes: Routes = [
   { path: '', component: HomeComponent, title: 'Muly | A rede social para quem ama música' },
@@ -17,6 +18,7 @@ export const routes: Routes = [
   { path: 'register', component: RegisterComponent, title: 'Cadastrar | Muly' },
   { path: 'catalog', component: CatalogSearchComponent, title: 'Catálogo | Muly' },
   { path: 'catalog/albums/:spotifyId', component: AlbumDetailComponent, title: 'Álbum | Muly' },
+  { path: 'reviews/:id', component: ReviewDetailComponent, title: 'Review | Muly' },
   { path: 'lists', component: ListsBrowseComponent, title: 'Listas de Álbuns | Muly' },
   {
     path: 'lists/new',

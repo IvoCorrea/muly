@@ -119,6 +119,22 @@ export default async function handler(req, res) {
         image = list.items[0].album.coverUrl;
       }
     }
+  } else if (type === 'review' && id) {
+    canonicalPath = `/reviews/${encodeURIComponent(id)}`;
+    const rev = await fetchJson(`${API_BASE}/reviews/${encodeURIComponent(id)}`);
+    if (rev) {
+      if (rev.albumCoverUrl) {
+        image = rev.albumCoverUrl;
+      }
+      const stars = formatStars(rev.rating);
+      const targetLabel = rev.trackNumber
+        ? `a música "${rev.trackTitle}" (${rev.albumTitle})`
+        : `o álbum "${rev.albumTitle}" (${rev.albumArtist})`;
+      title = `${stars} (${Number(rev.rating).toFixed(1)}/5) — Review de @${rev.username} para ${targetLabel}`;
+      description = rev.reviewText
+        ? `"${rev.reviewText}" — Avaliado por @${rev.username} no Muly.`
+        : `Veja a avaliação de @${rev.username} para ${rev.albumTitle} (${rev.albumArtist}) no Muly.`;
+    }
   }
 
   const fullUrl = `${origin}${canonicalPath}`;

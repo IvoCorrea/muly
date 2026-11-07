@@ -45,6 +45,10 @@ export class ReviewsService {
     return this.http.get<ReviewResponse[]>(`${environment.apiUrl}/reviews/feed?tab=${tab}`);
   }
 
+  public getReviewById(id: string): Observable<ReviewResponse> {
+    return this.http.get<ReviewResponse>(`${environment.apiUrl}/reviews/${id}`);
+  }
+
   public getReviewsByAlbum(externalId: string): Observable<AlbumReviewsSummaryResponse> {
     return this.http.get<AlbumReviewsSummaryResponse>(`${environment.apiUrl}/reviews/album/${externalId}`);
   }
