@@ -3,31 +3,34 @@ import { Component, ElementRef, HostListener, inject, OnInit, ViewChild } from '
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AlbumResponse } from '../../core/models/catalog.models';
+import { ReviewResponse } from '../../core/models/reviews.models';
 import { AuthService } from '../../core/services/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
+import { ReviewsService } from '../../core/services/reviews.service';
 import { AlbumCardComponent } from '../../shared/components/album-card/album-card.component';
+import { StarRatingComponent } from '../../shared/components/star-rating/star-rating.component';
 
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, AlbumCardComponent],
+  imports: [CommonModule, FormsModule, RouterLink, AlbumCardComponent, StarRatingComponent],
   template: `
     <div>
       <!-- Hero Section -->
-      <section class="py-10 sm:py-20 px-4 text-center border-b border-[#242c34] bg-gradient-to-b from-[#181e24] to-[#14181c]">
+      <section class="py-10 sm:py-16 px-4 text-center border-b border-[#242c34] bg-gradient-to-b from-[#181e24] to-[#14181c]">
         <div class="max-w-3xl mx-auto">
           <span class="inline-block text-[10px] sm:text-xs font-black uppercase tracking-widest text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full mb-3 sm:mb-4">
             A rede social para quem ama música
           </span>
-          <h1 class="text-3xl sm:text-6xl font-black text-white tracking-tight leading-tight">
+          <h1 class="text-3xl sm:text-5xl font-black text-white tracking-tight leading-tight">
             Catalogue o que você ouve. Compartilhe o que você sente.
           </h1>
-          <p class="text-sm sm:text-base text-gray-400 mt-4 leading-relaxed max-w-xl mx-auto">
-            Registre suas audições, monte listas temáticas e descubra o que seus amigos andam ouvindo.
+          <p class="text-sm sm:text-base text-gray-400 mt-3 leading-relaxed max-w-xl mx-auto">
+            Registre suas audições com notas de 0.5 a 5 estrelas, monte listas temáticas e acompanhe o que seus amigos andam ouvindo.
           </p>
 
           <!-- Input de Busca Rápida com Autocomplete em Tempo Real -->
-          <div #searchContainer class="mt-8 max-w-md mx-auto relative text-left">
+          <div #searchContainer class="mt-7 max-w-md mx-auto relative text-left">
             <form (ngSubmit)="search()" class="flex gap-2">
               <input
                 type="text"
@@ -98,11 +101,250 @@ import { AlbumCardComponent } from '../../shared/components/album-card/album-car
         </div>
       </section>
 
+      <!-- Feed de Atividade Social -->
+      <section class="max-w-6xl mx-auto px-4 pt-10 pb-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div>
+            <h2 class="text-sm font-black uppercase tracking-widest text-white flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+              <span>Feed de Atividade</span>
+            </h2>
+            <p class="text-xs text-gray-400 mt-0.5">
+              Acompanhe as resenhas e notas mais recentes de amigos e da comunidade.
+            </p>
+          </div>
+
+          <!-- Abas do Feed -->
+          <div class="inline-flex items-center bg-[#181e24] border border-[#2a343d] rounded-lg p-1 self-start sm:self-auto">
+            @if (authService.isAuthenticated()) {
+              <button
+                type="button"
+                (click)="selectFeedTab('following')"
+                class="cursor-pointer text-xs font-bold px-3.5 py-1.5 rounded-md transition-colors"
+                [ngClass]="feedTab === 'following' ? 'bg-emerald-500 text-black shadow' : 'text-gray-400 hover:text-white'"
+              >
+                👥 Seguindo
+              </button>
+            }
+            <button
+              type="button"
+              (click)="selectFeedTab('trending')"
+              class="cursor-pointer text-xs font-bold px-3.5 py-1.5 rounded-md transition-colors"
+              [ngClass]="feedTab === 'trending' ? 'bg-emerald-500 text-black shadow' : 'text-gray-400 hover:text-white'"
+            >
+              🔥 Em Alta
+            </button>
+            <button
+              type="button"
+              (click)="selectFeedTab('recent')"
+              class="cursor-pointer text-xs font-bold px-3.5 py-1.5 rounded-md transition-colors"
+              [ngClass]="feedTab === 'recent' ? 'bg-emerald-500 text-black shadow' : 'text-gray-400 hover:text-white'"
+            >
+              🕒 Recentes
+            </button>
+          </div>
+        </div>
+
+        @if (loadingFeed) {
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            @for (s of [1, 2, 3, 4]; track s) {
+              <div class="bg-[#1b2228] border border-[#2a343d] rounded-xl p-5 flex gap-4">
+                <div class="w-16 h-16 rounded skeleton-shimmer shrink-0"></div>
+                <div class="flex-1 space-y-2.5">
+                  <div class="h-3.5 w-1/2 rounded skeleton-shimmer"></div>
+                  <div class="h-3 w-3/4 rounded skeleton-shimmer"></div>
+                  <div class="h-2.5 w-full rounded skeleton-shimmer"></div>
+                </div>
+              </div>
+            }
+          </div>
+        } @else if (feedReviews.length > 0) {
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            @for (rev of feedReviews; track rev.id) {
+              <div class="bg-[#1b2228] border border-[#2a343d] hover:border-[#374450] rounded-xl p-5 flex flex-col justify-between transition-all shadow">
+                <div>
+                  <!-- Cabeçalho do Autor -->
+                  <div class="flex items-center justify-between gap-2 mb-3">
+                    <a
+                      [routerLink]="['/profile', rev.username]"
+                      class="inline-flex items-center gap-2 group min-w-0"
+                    >
+                      <span class="w-7 h-7 rounded-full bg-[#12161a] border border-emerald-500/60 overflow-hidden flex items-center justify-center text-[10px] font-black text-white uppercase shrink-0">
+                        @if (rev.userAvatarUrl) {
+                          <img [src]="rev.userAvatarUrl" [alt]="rev.username" class="w-full h-full object-cover" />
+                        } @else {
+                          {{ (rev.userDisplayName || rev.username).substring(0, 2) }}
+                        }
+                      </span>
+                      <div class="truncate">
+                        <span class="text-xs font-bold text-gray-100 group-hover:text-emerald-400 transition-colors">
+                          {{ rev.userDisplayName || rev.username }}
+                        </span>
+                        <span class="text-[11px] text-gray-500 ml-1">&#64;{{ rev.username }}</span>
+                      </div>
+                    </a>
+
+                    <app-star-rating [rating]="rev.rating" [readonly]="true" />
+                  </div>
+
+                  <!-- Álbum / Música Avaliada -->
+                  <div class="flex items-start gap-3.5 bg-[#14181c] border border-[#242c34] rounded-lg p-3">
+                    @if (rev.albumCoverUrl) {
+                      <a [routerLink]="['/catalog/albums', rev.albumExternalId]" class="shrink-0">
+                        <img
+                          [src]="rev.albumCoverUrl"
+                          [alt]="rev.albumTitle"
+                          class="w-14 h-14 rounded object-cover shadow border border-[#2a343d]"
+                        />
+                      </a>
+                    }
+                    <div class="min-w-0 flex-1">
+                      <div class="flex flex-wrap items-center gap-1.5">
+                        @if (rev.trackNumber !== null) {
+                          <span class="text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+                            🎵 Faixa #{{ rev.trackNumber }} • {{ rev.trackTitle }}
+                          </span>
+                        } @else {
+                          <span class="text-[10px] font-semibold bg-[#1b2228] text-gray-400 border border-[#2a343d] px-2 py-0.5 rounded-full">
+                            💿 Álbum
+                          </span>
+                        }
+                      </div>
+                      <a
+                        [routerLink]="['/catalog/albums', rev.albumExternalId]"
+                        class="block font-black text-sm text-white hover:text-emerald-400 transition-colors truncate mt-1"
+                      >
+                        {{ rev.albumTitle }}
+                      </a>
+                      <p class="text-xs text-gray-400 truncate">{{ rev.albumArtist }}</p>
+                    </div>
+                  </div>
+
+                  @if (rev.reviewText) {
+                    <p class="text-xs text-gray-300 leading-relaxed mt-3 line-clamp-3 whitespace-pre-wrap">
+                      {{ rev.reviewText }}
+                    </p>
+                  }
+                </div>
+
+                <!-- Rodapé de Interação do Card -->
+                <div class="mt-4 pt-3 border-t border-[#242c34]">
+                  <div class="flex items-center justify-between text-xs">
+                    <div class="flex items-center gap-4">
+                      <button
+                        type="button"
+                        (click)="toggleLikeReview(rev)"
+                        class="cursor-pointer inline-flex items-center gap-1.5 font-bold transition-colors"
+                        [ngClass]="rev.likedByMe ? 'text-rose-400' : 'text-gray-400 hover:text-rose-400'"
+                      >
+                        <span>{{ rev.likedByMe ? '♥' : '♡' }}</span>
+                        <span>{{ rev.likesCount || 0 }}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        (click)="toggleCommentsDrawer(rev.id)"
+                        class="cursor-pointer inline-flex items-center gap-1.5 font-bold transition-colors"
+                        [ngClass]="openCommentsMap[rev.id] ? 'text-emerald-400' : 'text-gray-400 hover:text-emerald-400'"
+                      >
+                        <span>💬</span>
+                        <span>{{ rev.commentsCount || (rev.comments?.length || 0) }}</span>
+                      </button>
+                    </div>
+
+                    <div class="flex items-center gap-3">
+                      <span class="text-[10px] text-gray-500">{{ formatDate(rev.createdAt) }}</span>
+                      <a
+                        [routerLink]="['/catalog/albums', rev.albumExternalId]"
+                        [queryParams]="{ review: rev.id }"
+                        class="text-[11px] font-bold text-emerald-400 hover:underline"
+                      >
+                        Ver →
+                      </a>
+                    </div>
+                  </div>
+
+                  <!-- Gaveta de Comentários no Feed -->
+                  @if (openCommentsMap[rev.id]) {
+                    <div class="mt-3 pt-3 border-t border-[#242c34] space-y-2">
+                      @if (rev.comments && rev.comments.length > 0) {
+                        <div class="space-y-1.5 max-h-40 overflow-y-auto">
+                          @for (c of rev.comments; track c.id) {
+                            <div class="bg-[#14181c] border border-[#242c34] rounded p-2 flex items-start justify-between gap-2 text-xs">
+                              <div class="min-w-0">
+                                <a [routerLink]="['/profile', c.username]" class="font-bold text-emerald-400 hover:underline mr-1.5">
+                                  &#64;{{ c.username }}:
+                                </a>
+                                <span class="text-gray-200 break-words">{{ c.content }}</span>
+                              </div>
+                              @if (canDeleteComment(c.username, rev.username)) {
+                                <button
+                                  type="button"
+                                  (click)="deleteReviewComment(rev, c.id)"
+                                  class="cursor-pointer text-[10px] text-gray-500 hover:text-red-400 px-1 shrink-0"
+                                >
+                                  ✕
+                                </button>
+                              }
+                            </div>
+                          }
+                        </div>
+                      } @else {
+                        <p class="text-[11px] text-gray-500">Seja o primeiro a comentar!</p>
+                      }
+
+                      @if (authService.isAuthenticated()) {
+                        <form (ngSubmit)="submitReviewComment(rev)" class="flex gap-2 pt-1">
+                          <input
+                            type="text"
+                            [name]="'feed-comment-' + rev.id"
+                            [(ngModel)]="commentInputs[rev.id]"
+                            placeholder="Adicionar comentário..."
+                            class="flex-1 bg-[#12161a] border border-[#2a343d] rounded px-2.5 py-1.5 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-emerald-500"
+                          />
+                          <button
+                            type="submit"
+                            [disabled]="!commentInputs[rev.id]?.trim()"
+                            class="cursor-pointer disabled:opacity-50 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-[11px] uppercase tracking-wider px-3 py-1.5 rounded transition-colors"
+                          >
+                            Enviar
+                          </button>
+                        </form>
+                      }
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        } @else {
+          <div class="p-10 bg-[#1b2228] border border-dashed border-[#2a343d] rounded-xl text-center">
+            @if (feedTab === 'following') {
+              <p class="text-sm font-bold text-gray-200">Seu feed de amigos está vazio por enquanto</p>
+              <p class="text-xs text-gray-400 mt-1 max-w-md mx-auto">
+                Explore a aba <strong class="text-emerald-400">Em Alta</strong>, visite o perfil de outros amantes de música e clique em <strong class="text-emerald-400">+ Seguir</strong> para ver as avaliações deles aqui!
+              </p>
+              <button
+                type="button"
+                (click)="selectFeedTab('trending')"
+                class="cursor-pointer mt-4 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs uppercase tracking-wider px-4 py-2 rounded-lg transition-colors"
+              >
+                Explorar Comunidade
+              </button>
+            } @else {
+              <p class="text-xs text-gray-400">
+                Ainda não há avaliações publicadas. Busque um álbum acima e seja o primeiro a avaliar!
+              </p>
+            }
+          </div>
+        }
+      </section>
+
       <!-- Álbuns em Destaque / Clássicos -->
-      <section class="max-w-6xl mx-auto px-4 py-12">
+      <section class="max-w-6xl mx-auto px-4 py-10">
         <div class="flex items-center justify-between mb-6">
           <h2 class="text-xs font-black uppercase tracking-widest text-gray-300">
-            Destaques da Comunidade
+            Destaques do Catálogo
           </h2>
           <a routerLink="/catalog" class="text-xs text-emerald-400 hover:underline font-semibold">
             Explorar catálogo completo →
@@ -133,6 +375,7 @@ import { AlbumCardComponent } from '../../shared/components/album-card/album-car
 export class HomeComponent implements OnInit {
   authService = inject(AuthService);
   private catalogService = inject(CatalogService);
+  private reviewsService = inject(ReviewsService);
   private router = inject(Router);
 
   @ViewChild('searchContainer') searchContainer?: ElementRef<HTMLElement>;
@@ -144,6 +387,12 @@ export class HomeComponent implements OnInit {
   featuredAlbums: AlbumResponse[] = [];
   loading = true;
 
+  feedTab: 'trending' | 'following' | 'recent' = 'trending';
+  feedReviews: ReviewResponse[] = [];
+  loadingFeed = true;
+  openCommentsMap: Record<string, boolean> = {};
+  commentInputs: Record<string, string> = {};
+
   @HostListener('document:mousedown', ['$event'])
   onDocumentClick(event: MouseEvent): void {
     if (!this.showDropdown && !this.searchingLive) return;
@@ -154,7 +403,8 @@ export class HomeComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // Busca inicial de clássicos
+    this.loadFeed();
+
     this.catalogService.search('Radiohead').subscribe({
       next: (albums) => {
         this.featuredAlbums = albums.slice(0, 10);
@@ -162,6 +412,70 @@ export class HomeComponent implements OnInit {
       },
       error: () => {
         this.loading = false;
+      }
+    });
+  }
+
+  selectFeedTab(tab: 'trending' | 'following' | 'recent'): void {
+    this.feedTab = tab;
+    this.loadFeed();
+  }
+
+  loadFeed(): void {
+    this.loadingFeed = true;
+    this.reviewsService.getFeed(this.feedTab).subscribe({
+      next: (reviews) => {
+        this.feedReviews = reviews || [];
+        this.loadingFeed = false;
+      },
+      error: () => {
+        this.feedReviews = [];
+        this.loadingFeed = false;
+      }
+    });
+  }
+
+  toggleLikeReview(rev: ReviewResponse): void {
+    if (!this.authService.isAuthenticated()) {
+      this.router.navigate(['/login']);
+      return;
+    }
+    this.reviewsService.toggleLike(rev.id).subscribe({
+      next: (updated) => {
+        rev.likedByMe = updated.likedByMe;
+        rev.likesCount = updated.likesCount;
+      }
+    });
+  }
+
+  toggleCommentsDrawer(reviewId: string): void {
+    this.openCommentsMap[reviewId] = !this.openCommentsMap[reviewId];
+  }
+
+  submitReviewComment(rev: ReviewResponse): void {
+    const text = (this.commentInputs[rev.id] || '').trim();
+    if (!text) return;
+
+    this.reviewsService.addComment(rev.id, { content: text }).subscribe({
+      next: (comment) => {
+        rev.comments = [...(rev.comments || []), comment];
+        rev.commentsCount = rev.comments.length;
+        this.commentInputs[rev.id] = '';
+      }
+    });
+  }
+
+  canDeleteComment(commentAuthor: string, reviewOwner: string): boolean {
+    const current = this.authService.currentUser()?.toLowerCase();
+    if (!current) return false;
+    return current === commentAuthor.toLowerCase() || current === reviewOwner.toLowerCase();
+  }
+
+  deleteReviewComment(rev: ReviewResponse, commentId: string): void {
+    this.reviewsService.deleteComment(rev.id, commentId).subscribe({
+      next: () => {
+        rev.comments = (rev.comments || []).filter(c => c.id !== commentId);
+        rev.commentsCount = rev.comments.length;
       }
     });
   }
@@ -212,5 +526,11 @@ export class HomeComponent implements OnInit {
       this.searchingLive = false;
       this.router.navigate(['/catalog'], { queryParams: { q } });
     }
+  }
+
+  formatDate(dateStr: string): string {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
   }
 }

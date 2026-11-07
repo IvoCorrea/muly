@@ -4,8 +4,10 @@ import { FormsModule } from '@angular/forms';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { filter } from 'rxjs';
 import { AlbumResponse } from '../../../core/models/catalog.models';
+import { NotificationResponse } from '../../../core/models/social.models';
 import { AuthService } from '../../../core/services/auth.service';
 import { CatalogService } from '../../../core/services/catalog.service';
+import { NotificationsService } from '../../../core/services/notifications.service';
 
 @Component({
   selector: 'app-navbar',
@@ -29,6 +31,14 @@ import { CatalogService } from '../../../core/services/catalog.service';
           </a>
 
           <nav class="hidden md:flex items-center gap-6 text-sm font-semibold text-gray-400">
+            <a
+              routerLink="/"
+              routerLinkActive="text-emerald-400"
+              [routerLinkActiveOptions]="{ exact: true }"
+              class="hover:text-gray-100 transition-colors uppercase tracking-wider text-xs"
+            >
+              Feed
+            </a>
             <a
               routerLink="/catalog"
               routerLinkActive="text-emerald-400"
@@ -55,7 +65,7 @@ import { CatalogService } from '../../../core/services/catalog.service';
           </nav>
         </div>
 
-        <!-- Barra de busca rápida & Auth controls (Desktop) -->
+        <!-- Barra de busca rápida, Notificações & Auth controls (Desktop) -->
         <div class="hidden md:flex items-center gap-4">
           <div #searchContainer class="relative">
             <form (ngSubmit)="searchFast()">
@@ -109,6 +119,81 @@ import { CatalogService } from '../../../core/services/catalog.service';
           </div>
 
           @if (authService.isAuthenticated()) {
+            <!-- Sino de Notificações Desktop -->
+            <div #notifContainer class="relative">
+              <button
+                type="button"
+                (click)="toggleNotifications()"
+                class="cursor-pointer relative w-9 h-9 rounded-full bg-[#1b2228] hover:bg-[#242c34] border border-[#2a343d] flex items-center justify-center text-gray-300 hover:text-emerald-400 transition-colors"
+                title="Notificações"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+                @if (unreadCount > 0) {
+                  <span class="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-emerald-500 text-black font-black text-[10px] flex items-center justify-center shadow">
+                    {{ unreadCount > 9 ? '9+' : unreadCount }}
+                  </span>
+                }
+              </button>
+
+              @if (notifOpen) {
+                <div class="animate-dropdown absolute right-0 w-80 sm:w-96 z-50 bg-[#12161a] border border-[#2a343d] rounded-xl mt-2 shadow-2xl overflow-hidden">
+                  <div class="px-4 py-3 bg-[#181e24] border-b border-[#242c34] flex items-center justify-between">
+                    <span class="text-xs font-black uppercase tracking-wider text-white">
+                      Notificações
+                    </span>
+                    @if (unreadCount > 0) {
+                      <button
+                        type="button"
+                        (click)="markAllNotificationsRead()"
+                        class="cursor-pointer text-[11px] font-semibold text-emerald-400 hover:underline"
+                      >
+                        Marcar todas como lidas
+                      </button>
+                    }
+                  </div>
+
+                  <div class="max-h-80 overflow-y-auto divide-y divide-[#242c34]">
+                    @if (notifications.length > 0) {
+                      @for (n of notifications; track n.id) {
+                        <button
+                          type="button"
+                          (click)="openNotification(n)"
+                          class="cursor-pointer w-full text-left p-3.5 hover:bg-[#1b2228] transition-colors flex items-start gap-3"
+                          [ngClass]="{ 'bg-emerald-500/5': !n.read }"
+                        >
+                          <div class="w-8 h-8 rounded-full bg-[#1b2228] border border-emerald-500/50 overflow-hidden flex items-center justify-center text-[10px] font-black text-white uppercase shrink-0 mt-0.5">
+                            @if (n.actorAvatarUrl) {
+                              <img [src]="n.actorAvatarUrl" [alt]="n.actorUsername" class="w-full h-full object-cover" />
+                            } @else {
+                              {{ (n.actorDisplayName || n.actorUsername).substring(0, 2) }}
+                            }
+                          </div>
+                          <div class="flex-1 min-w-0">
+                            <p class="text-xs text-gray-200 leading-snug">
+                              <strong class="text-emerald-400 font-bold">&#64;{{ n.actorUsername }}</strong>
+                              {{ ' ' + n.message }}
+                            </p>
+                            <span class="text-[10px] text-gray-500 mt-1 block">
+                              {{ formatNotifDate(n.createdAt) }}
+                            </span>
+                          </div>
+                          @if (!n.read) {
+                            <span class="w-2 h-2 rounded-full bg-emerald-400 shrink-0 mt-2"></span>
+                          }
+                        </button>
+                      }
+                    } @else {
+                      <div class="p-8 text-center text-xs text-gray-500">
+                        Nenhuma notificação por enquanto.
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+
             <div class="flex items-center gap-3">
               <span class="text-xs font-medium text-gray-400 hidden lg:inline">
                 Olá, <strong class="text-emerald-400 font-semibold">{{ authService.currentUser() }}</strong>
@@ -139,8 +224,27 @@ import { CatalogService } from '../../../core/services/catalog.service';
           }
         </div>
 
-        <!-- Botões Mobile: Busca Rápida + Hamburger Menu -->
+        <!-- Botões Mobile: Notificações + Busca Rápida + Hamburger Menu -->
         <div class="flex md:hidden items-center gap-2">
+          @if (authService.isAuthenticated()) {
+            <button
+              type="button"
+              (click)="toggleMobileNotifications()"
+              class="cursor-pointer relative w-10 h-10 rounded-lg bg-[#1b2228] border border-[#2a343d] flex items-center justify-center text-gray-300 hover:text-emerald-400 transition-colors"
+              [ngClass]="{ 'border-emerald-500/60 text-emerald-400': mobileNotifOpen }"
+              aria-label="Notificações"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+              @if (unreadCount > 0) {
+                <span class="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-emerald-500 text-black font-black text-[10px] flex items-center justify-center shadow">
+                  {{ unreadCount > 9 ? '9+' : unreadCount }}
+                </span>
+              }
+            </button>
+          }
+
           <button
             type="button"
             (click)="toggleMobileSearch()"
@@ -172,6 +276,56 @@ import { CatalogService } from '../../../core/services/catalog.service';
           </button>
         </div>
       </div>
+
+      <!-- Gaveta de Notificações Mobile -->
+      @if (mobileNotifOpen) {
+        <div class="md:hidden border-t border-[#242c34] bg-[#12161a] animate-dropdown shadow-2xl">
+          <div class="px-4 py-2.5 bg-[#181e24] border-b border-[#242c34] flex items-center justify-between">
+            <span class="text-xs font-black uppercase tracking-wider text-white">Notificações</span>
+            @if (unreadCount > 0) {
+              <button
+                type="button"
+                (click)="markAllNotificationsRead()"
+                class="cursor-pointer text-[11px] font-semibold text-emerald-400 hover:underline"
+              >
+                Marcar todas como lidas
+              </button>
+            }
+          </div>
+          <div class="max-h-72 overflow-y-auto divide-y divide-[#242c34]">
+            @if (notifications.length > 0) {
+              @for (n of notifications; track n.id) {
+                <button
+                  type="button"
+                  (click)="openNotification(n)"
+                  class="cursor-pointer w-full text-left p-3.5 hover:bg-[#1b2228] flex items-start gap-3"
+                  [ngClass]="{ 'bg-emerald-500/5': !n.read }"
+                >
+                  <div class="w-8 h-8 rounded-full bg-[#1b2228] border border-emerald-500/50 overflow-hidden flex items-center justify-center text-[10px] font-black text-white uppercase shrink-0">
+                    @if (n.actorAvatarUrl) {
+                      <img [src]="n.actorAvatarUrl" [alt]="n.actorUsername" class="w-full h-full object-cover" />
+                    } @else {
+                      {{ (n.actorDisplayName || n.actorUsername).substring(0, 2) }}
+                    }
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-xs text-gray-200 leading-snug">
+                      <strong class="text-emerald-400 font-bold">&#64;{{ n.actorUsername }}</strong>
+                      {{ ' ' + n.message }}
+                    </p>
+                    <span class="text-[10px] text-gray-500 mt-1 block">{{ formatNotifDate(n.createdAt) }}</span>
+                  </div>
+                  @if (!n.read) {
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 shrink-0 mt-2"></span>
+                  }
+                </button>
+              }
+            } @else {
+              <div class="p-6 text-center text-xs text-gray-500">Nenhuma notificação por enquanto.</div>
+            }
+          </div>
+        </div>
+      }
 
       <!-- Gaveta de Busca Mobile -->
       @if (mobileSearchOpen) {
@@ -263,7 +417,7 @@ import { CatalogService } from '../../../core/services/catalog.service';
               class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-bold text-gray-200 hover:bg-[#1b2228] active:bg-[#242c34]"
             >
               <span>🏠</span>
-              <span>Início</span>
+              <span>Início & Feed</span>
             </a>
             <a
               routerLink="/catalog"
@@ -335,7 +489,7 @@ import { CatalogService } from '../../../core/services/catalog.service';
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
         </svg>
-        <span>Início</span>
+        <span>Feed</span>
       </a>
 
       <a
@@ -393,9 +547,11 @@ import { CatalogService } from '../../../core/services/catalog.service';
 export class NavbarComponent implements OnInit {
   authService = inject(AuthService);
   private catalogService = inject(CatalogService);
+  private notificationsService = inject(NotificationsService);
   private router = inject(Router);
 
   @ViewChild('searchContainer') searchContainer?: ElementRef<HTMLElement>;
+  @ViewChild('notifContainer') notifContainer?: ElementRef<HTMLElement>;
   @ViewChild('headerContainer') headerContainer?: ElementRef<HTMLElement>;
 
   searchQuery = '';
@@ -403,18 +559,81 @@ export class NavbarComponent implements OnInit {
   searchingLive = false;
   showDropdown = false;
 
+  notifications: NotificationResponse[] = [];
+  unreadCount = 0;
+  notifOpen = false;
+  mobileNotifOpen = false;
+
   mobileMenuOpen = false;
   mobileSearchOpen = false;
 
   ngOnInit(): void {
+    this.refreshNotifications();
     this.router.events.pipe(filter(e => e instanceof NavigationEnd)).subscribe(() => {
       this.closeMobilePanels();
+      this.refreshNotifications();
     });
+  }
+
+  refreshNotifications(): void {
+    if (!this.authService.isAuthenticated()) {
+      this.notifications = [];
+      this.unreadCount = 0;
+      return;
+    }
+    this.notificationsService.getMyNotifications().subscribe({
+      next: (summary) => {
+        this.notifications = summary.notifications || [];
+        this.unreadCount = summary.unreadCount || 0;
+      },
+      error: () => {}
+    });
+  }
+
+  toggleNotifications(): void {
+    this.notifOpen = !this.notifOpen;
+    if (this.notifOpen) {
+      this.refreshNotifications();
+    }
+  }
+
+  toggleMobileNotifications(): void {
+    this.mobileNotifOpen = !this.mobileNotifOpen;
+    if (this.mobileNotifOpen) {
+      this.mobileMenuOpen = false;
+      this.mobileSearchOpen = false;
+      this.refreshNotifications();
+    }
+  }
+
+  markAllNotificationsRead(): void {
+    this.notificationsService.markAllAsRead().subscribe({
+      next: (summary) => {
+        this.notifications = summary.notifications || [];
+        this.unreadCount = summary.unreadCount || 0;
+      }
+    });
+  }
+
+  openNotification(n: NotificationResponse): void {
+    if (!n.read) {
+      this.notificationsService.markAsRead(n.id).subscribe({
+        next: () => {
+          n.read = true;
+          this.unreadCount = Math.max(0, this.unreadCount - 1);
+        }
+      });
+    }
+    this.notifOpen = false;
+    this.mobileNotifOpen = false;
+    if (n.targetUrl) {
+      this.router.navigateByUrl(n.targetUrl);
+    }
   }
 
   @HostListener('document:mousedown', ['$event'])
   onDocumentClick(event: MouseEvent): void {
-    if (!this.showDropdown && !this.searchingLive && !this.mobileMenuOpen && !this.mobileSearchOpen) {
+    if (!this.showDropdown && !this.searchingLive && !this.mobileMenuOpen && !this.mobileSearchOpen && !this.notifOpen && !this.mobileNotifOpen) {
       return;
     }
     const target = event.target as Node;
@@ -422,9 +641,13 @@ export class NavbarComponent implements OnInit {
       this.showDropdown = false;
       this.searchingLive = false;
     }
+    if (this.notifContainer && !this.notifContainer.nativeElement.contains(target)) {
+      this.notifOpen = false;
+    }
     if (this.headerContainer && !this.headerContainer.nativeElement.contains(target)) {
       this.mobileMenuOpen = false;
       this.mobileSearchOpen = false;
+      this.mobileNotifOpen = false;
     }
   }
 
@@ -432,6 +655,7 @@ export class NavbarComponent implements OnInit {
     this.mobileMenuOpen = !this.mobileMenuOpen;
     if (this.mobileMenuOpen) {
       this.mobileSearchOpen = false;
+      this.mobileNotifOpen = false;
     }
   }
 
@@ -439,12 +663,15 @@ export class NavbarComponent implements OnInit {
     this.mobileSearchOpen = !this.mobileSearchOpen;
     if (this.mobileSearchOpen) {
       this.mobileMenuOpen = false;
+      this.mobileNotifOpen = false;
     }
   }
 
   closeMobilePanels(): void {
     this.mobileMenuOpen = false;
     this.mobileSearchOpen = false;
+    this.mobileNotifOpen = false;
+    this.notifOpen = false;
     this.showDropdown = false;
     this.searchingLive = false;
   }
@@ -499,5 +726,11 @@ export class NavbarComponent implements OnInit {
   logout(): void {
     this.closeMobilePanels();
     this.authService.logout();
+  }
+
+  formatNotifDate(dateStr: string): string {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
   }
 }

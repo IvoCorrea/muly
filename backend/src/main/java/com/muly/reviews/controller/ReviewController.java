@@ -1,9 +1,6 @@
 package com.muly.reviews.controller;
 
-import com.muly.reviews.dto.AlbumReviewsSummaryResponse;
-import com.muly.reviews.dto.CreateReviewRequest;
-import com.muly.reviews.dto.ReviewResponse;
-import com.muly.reviews.dto.UpdateReviewRequest;
+import com.muly.reviews.dto.*;
 import com.muly.reviews.service.ReviewService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -52,15 +49,60 @@ public class ReviewController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/{id}/like")
+    public ResponseEntity<ReviewResponse> toggleLike(
+            @PathVariable UUID id,
+            Principal principal
+    ) {
+        return ResponseEntity.ok(reviewService.toggleLike(principal.getName(), id));
+    }
+
+    @PostMapping("/{id}/comments")
+    public ResponseEntity<ReviewCommentResponse> addComment(
+            @PathVariable UUID id,
+            @Valid @RequestBody CreateReviewCommentRequest request,
+            Principal principal
+    ) {
+        ReviewCommentResponse comment = reviewService.addComment(principal.getName(), id, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(comment);
+    }
+
+    @DeleteMapping("/{id}/comments/{commentId}")
+    public ResponseEntity<Void> deleteComment(
+            @PathVariable UUID id,
+            @PathVariable UUID commentId,
+            Principal principal
+    ) {
+        reviewService.deleteComment(principal.getName(), id, commentId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/feed")
+    public ResponseEntity<List<ReviewResponse>> getFeed(
+            @RequestParam(value = "tab", defaultValue = "trending") String tab,
+            Principal principal
+    ) {
+        String viewer = principal != null ? principal.getName() : null;
+        return ResponseEntity.ok(reviewService.getFeed(tab, viewer));
+    }
+
     @GetMapping("/album/{externalId}")
-    public ResponseEntity<AlbumReviewsSummaryResponse> getReviewsByAlbum(@PathVariable String externalId) {
-        AlbumReviewsSummaryResponse response = reviewService.getReviewsByAlbum(externalId);
+    public ResponseEntity<AlbumReviewsSummaryResponse> getReviewsByAlbum(
+            @PathVariable String externalId,
+            Principal principal
+    ) {
+        String viewer = principal != null ? principal.getName() : null;
+        AlbumReviewsSummaryResponse response = reviewService.getReviewsByAlbum(externalId, viewer);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/user/{username}")
-    public ResponseEntity<List<ReviewResponse>> getReviewsByUser(@PathVariable String username) {
-        List<ReviewResponse> response = reviewService.getReviewsByUser(username);
+    public ResponseEntity<List<ReviewResponse>> getReviewsByUser(
+            @PathVariable String username,
+            Principal principal
+    ) {
+        String viewer = principal != null ? principal.getName() : null;
+        List<ReviewResponse> response = reviewService.getReviewsByUser(username, viewer);
         return ResponseEntity.ok(response);
     }
 

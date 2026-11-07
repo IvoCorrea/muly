@@ -1,6 +1,7 @@
 package com.muly.reviews.dto;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 public record ReviewResponse(
@@ -18,6 +19,10 @@ public record ReviewResponse(
         Double rating,
         String reviewText,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        long likesCount,
+        boolean likedByMe,
+        long commentsCount,
+        List<ReviewCommentResponse> comments
 ) {
 }

@@ -38,7 +38,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/auth/**").permitAll()
                         .requestMatchers("/profile/me", "/profile/me/**").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/profile/{username}").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/profile/{username}", "/profile/{username}/followers", "/profile/{username}/following").permitAll()
                         .requestMatchers(HttpMethod.GET, "/catalog/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/reviews/me/**").authenticated()
                         .requestMatchers(HttpMethod.GET, "/reviews/**").permitAll()

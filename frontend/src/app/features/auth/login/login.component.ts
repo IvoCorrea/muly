@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
@@ -15,6 +15,12 @@ import { AuthService } from '../../../core/services/auth.service';
           <h1 class="text-2xl font-black text-white uppercase tracking-wider">Entrar no Muly</h1>
           <p class="text-xs text-gray-400 mt-1">Acesse sua conta para avaliar álbuns e montar seu perfil.</p>
         </div>
+
+        @if (sessionExpiredMessage) {
+          <div class="bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs rounded-lg p-3 mb-4">
+            {{ sessionExpiredMessage }}
+          </div>
+        }
 
         @if (errorMessage) {
           <div class="bg-red-500/10 border border-red-500/30 text-red-400 text-xs rounded-lg p-3 mb-4">
@@ -99,7 +105,7 @@ import { AuthService } from '../../../core/services/auth.service';
     </div>
   `
 })
-export class LoginComponent {
+export class LoginComponent implements OnInit {
   private authService = inject(AuthService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
@@ -109,9 +115,19 @@ export class LoginComponent {
   showPassword = false;
   loading = false;
   errorMessage = '';
+  sessionExpiredMessage = '';
+
+  ngOnInit(): void {
+    this.route.queryParamMap.subscribe(params => {
+      if (params.get('expired') === '1') {
+        this.sessionExpiredMessage = 'Sua sessão expirou por segurança. Faça login novamente para editar seu perfil.';
+      }
+    });
+  }
 
   onSubmit(): void {
     this.errorMessage = '';
+    this.sessionExpiredMessage = '';
     this.loading = true;
 
     this.authService.login({ username: this.username, password: this.password }).subscribe({

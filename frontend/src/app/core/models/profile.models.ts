@@ -14,6 +14,14 @@ export interface CurrentTrackResponse {
   spotifyUrl?: string | null;
 }
 
+export interface FollowUserResponse {
+  username: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+  bio: string | null;
+  followedByMe: boolean;
+}
+
 export interface UserProfileResponse {
   username: string;
   displayName: string | null;
@@ -26,6 +34,12 @@ export interface UserProfileResponse {
   currentTrack: CurrentTrackResponse | null;
   topAlbums: TopAlbumItemResponse[];
   totalReviews: number;
+  followersCount?: number;
+  followingCount?: number;
+  followedByMe?: boolean;
+  followsMe?: boolean;
+  tasteMatchPercentage?: number | null;
+  commonItemsCount?: number;
 }
 
 export interface UpdateProfileInfoRequest {
@@ -59,4 +73,14 @@ export interface TopAlbumItemRequest {
 
 export interface UpdateTopAlbumsRequest {
   topAlbums: TopAlbumItemRequest[];
+}
+
+export interface UpdateFullProfileRequest {
+  displayName?: string | null;
+  bio?: string | null;
+  spotifyProfileUrl?: string | null;
+  lastfmProfileUrl?: string | null;
+  favoriteAlbumSpotifyId?: string | null;
+  currentTrack?: SetCurrentTrackRequest | null;
+  topAlbums?: TopAlbumItemRequest[];
 }

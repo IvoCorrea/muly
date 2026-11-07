@@ -3,8 +3,10 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
+  FollowUserResponse,
   SetCurrentTrackRequest,
   SetFavoriteAlbumRequest,
+  UpdateFullProfileRequest,
   UpdateProfileInfoRequest,
   UpdateTopAlbumsRequest,
   UploadAvatarRequest,
@@ -23,6 +25,22 @@ export class ProfileService {
 
   public getMyProfile(): Observable<UserProfileResponse> {
     return this.http.get<UserProfileResponse>(`${environment.apiUrl}/profile/me`);
+  }
+
+  public updateFullProfile(request: UpdateFullProfileRequest): Observable<UserProfileResponse> {
+    return this.http.put<UserProfileResponse>(`${environment.apiUrl}/profile/me`, request);
+  }
+
+  public toggleFollow(username: string): Observable<UserProfileResponse> {
+    return this.http.post<UserProfileResponse>(`${environment.apiUrl}/profile/${username}/follow`, {});
+  }
+
+  public getFollowers(username: string): Observable<FollowUserResponse[]> {
+    return this.http.get<FollowUserResponse[]>(`${environment.apiUrl}/profile/${username}/followers`);
+  }
+
+  public getFollowing(username: string): Observable<FollowUserResponse[]> {
+    return this.http.get<FollowUserResponse[]>(`${environment.apiUrl}/profile/${username}/following`);
   }
 
   public updateProfileInfo(request: UpdateProfileInfoRequest): Observable<UserProfileResponse> {

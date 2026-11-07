@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
+import java.util.List;
 
 @RestController
 @RequestMapping("/profile")
@@ -20,7 +21,16 @@ public class ProfileController {
 
     @GetMapping("/me")
     public ResponseEntity<UserProfileResponse> getMyProfile(Principal principal) {
-        UserProfileResponse response = profileService.getProfile(principal.getName());
+        UserProfileResponse response = profileService.getProfile(principal.getName(), principal.getName());
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/me")
+    public ResponseEntity<UserProfileResponse> updateFullProfile(
+            @Valid @RequestBody UpdateFullProfileRequest request,
+            Principal principal
+    ) {
+        UserProfileResponse response = profileService.updateFullProfile(principal.getName(), request);
         return ResponseEntity.ok(response);
     }
 
@@ -76,8 +86,39 @@ public class ProfileController {
     }
 
     @GetMapping("/{username}")
-    public ResponseEntity<UserProfileResponse> getProfile(@PathVariable String username) {
-        UserProfileResponse response = profileService.getProfile(username);
+    public ResponseEntity<UserProfileResponse> getProfile(
+            @PathVariable String username,
+            Principal principal
+    ) {
+        String viewer = principal != null ? principal.getName() : null;
+        UserProfileResponse response = profileService.getProfile(username, viewer);
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{username}/follow")
+    public ResponseEntity<UserProfileResponse> toggleFollow(
+            @PathVariable String username,
+            Principal principal
+    ) {
+        UserProfileResponse response = profileService.toggleFollow(principal.getName(), username);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{username}/followers")
+    public ResponseEntity<List<FollowUserResponse>> getFollowers(
+            @PathVariable String username,
+            Principal principal
+    ) {
+        String viewer = principal != null ? principal.getName() : null;
+        return ResponseEntity.ok(profileService.getFollowers(username, viewer));
+    }
+
+    @GetMapping("/{username}/following")
+    public ResponseEntity<List<FollowUserResponse>> getFollowing(
+            @PathVariable String username,
+            Principal principal
+    ) {
+        String viewer = principal != null ? principal.getName() : null;
+        return ResponseEntity.ok(profileService.getFollowing(username, viewer));
     }
 }

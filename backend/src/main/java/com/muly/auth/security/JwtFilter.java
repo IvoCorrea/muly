@@ -15,6 +15,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Locale;
 
 @Slf4j
 @Component
@@ -39,16 +40,17 @@ public class JwtFilter extends OncePerRequestFilter {
         }
 
         try {
-        String token = authHeader.substring(7);
-        String username = jwtService.extractUsername(token);
+            String token = authHeader.substring(7).trim();
+            String username = jwtService.extractUsername(token);
 
-        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null && jwtService.isTokenValid(token, username)) {
-            User user = userRepository.findByUsername(username).orElseThrow(() -> new IllegalArgumentException("User not found: " + username));
+            if (username != null && SecurityContextHolder.getContext().getAuthentication() == null && jwtService.isTokenValid(token, username)) {
+                String normalized = username.trim().toLowerCase(Locale.ROOT);
+                User user = userRepository.findByUsername(normalized)
+                        .orElseThrow(() -> new IllegalArgumentException("User not found: " + normalized));
 
-            UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
-
-            SecurityContextHolder.getContext().setAuthentication(authenticationToken);
-         }
+                UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
+                SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+            }
         } catch (JwtException | IllegalArgumentException e) {
             log.warn("JWT fail: {}", e.getMessage());
         }

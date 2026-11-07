@@ -6,6 +6,7 @@ public record AlbumReviewsSummaryResponse(
         Double averageRating,
         long totalReviews,
         List<ReviewResponse> reviews,
-        List<ReviewResponse> trackReviews
+        List<ReviewResponse> trackReviews,
+        List<ReviewResponse> friendsReviews
 ) {
 }

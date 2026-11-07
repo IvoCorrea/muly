@@ -1,3 +1,17 @@
+export interface ReviewCommentResponse {
+  id: string;
+  reviewId: string;
+  username: string;
+  userDisplayName?: string | null;
+  userAvatarUrl?: string | null;
+  content: string;
+  createdAt: string;
+}
+
+export interface CreateReviewCommentRequest {
+  content: string;
+}
+
 export interface ReviewResponse {
   id: string;
   username: string;
@@ -14,6 +28,10 @@ export interface ReviewResponse {
   reviewText: string | null;
   createdAt: string;
   updatedAt: string | null;
+  likesCount?: number;
+  likedByMe?: boolean;
+  commentsCount?: number;
+  comments?: ReviewCommentResponse[];
 }
 
 export interface AlbumReviewsSummaryResponse {
@@ -21,6 +39,7 @@ export interface AlbumReviewsSummaryResponse {
   totalReviews: number;
   reviews: ReviewResponse[];
   trackReviews: ReviewResponse[];
+  friendsReviews?: ReviewResponse[];
 }
 
 export interface CreateReviewRequest {

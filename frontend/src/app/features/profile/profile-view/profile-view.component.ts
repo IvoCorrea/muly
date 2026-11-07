@@ -1,9 +1,10 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, OnDestroy, OnInit } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { Meta, Title } from '@angular/platform-browser';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AlbumListSummaryResponse } from '../../../core/models/lists.models';
-import { UserProfileResponse } from '../../../core/models/profile.models';
+import { FollowUserResponse, UserProfileResponse } from '../../../core/models/profile.models';
 import { ReviewResponse } from '../../../core/models/reviews.models';
 import { AuthService } from '../../../core/services/auth.service';
 import { CatalogService } from '../../../core/services/catalog.service';
@@ -17,7 +18,7 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
 @Component({
   selector: 'app-profile-view',
   standalone: true,
-  imports: [CommonModule, RouterLink, AlbumCardComponent, StarRatingComponent, ShareCardModalComponent],
+  imports: [CommonModule, FormsModule, RouterLink, AlbumCardComponent, StarRatingComponent, ShareCardModalComponent],
   template: `
     <div class="max-w-6xl mx-auto px-4 py-8">
       
@@ -55,12 +56,17 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                 }
               </div>
               <div>
-                <div class="flex flex-wrap items-baseline gap-2">
+                <div class="flex flex-wrap items-center gap-2">
                   <h1 class="text-2xl sm:text-3xl font-black text-white tracking-wide">
                     {{ profile.displayName || profile.username }}
                   </h1>
                   @if (profile.displayName) {
                     <span class="text-xs font-semibold text-emerald-400">&#64;{{ profile.username }}</span>
+                  }
+                  @if (profile.followsMe && !isOwnProfile) {
+                    <span class="text-[10px] font-bold uppercase tracking-wider bg-[#242c34] text-gray-300 border border-[#323e4a] px-2 py-0.5 rounded-full">
+                      Segue você
+                    </span>
                   }
                 </div>
 
@@ -74,11 +80,31 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                   Membro desde {{ formatDate(profile.memberSince) }}
                 </p>
 
-                <div class="mt-2.5 flex flex-wrap items-center gap-2">
+                <!-- Pílulas de Estatísticas e Seguidores -->
+                <div class="mt-3 flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    (click)="openFollowModal('followers')"
+                    class="cursor-pointer inline-flex items-center gap-1.5 bg-[#12161a] hover:bg-[#222b33] px-3 py-1 rounded-full text-xs font-semibold text-emerald-400 border border-[#242c34] hover:border-emerald-500/40 transition-colors"
+                  >
+                    <span>{{ profile.followersCount || 0 }}</span>
+                    <span class="text-gray-400 font-normal">{{ (profile.followersCount || 0) === 1 ? 'seguidor' : 'seguidores' }}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    (click)="openFollowModal('following')"
+                    class="cursor-pointer inline-flex items-center gap-1.5 bg-[#12161a] hover:bg-[#222b33] px-3 py-1 rounded-full text-xs font-semibold text-emerald-400 border border-[#242c34] hover:border-emerald-500/40 transition-colors"
+                  >
+                    <span>{{ profile.followingCount || 0 }}</span>
+                    <span class="text-gray-400 font-normal">seguindo</span>
+                  </button>
+
                   <div class="inline-flex items-center gap-1.5 bg-[#12161a] px-3 py-1 rounded-full text-xs font-semibold text-emerald-400 border border-[#242c34]">
                     <span>{{ profile.totalReviews }}</span>
-                    <span class="text-gray-400 font-normal">{{ profile.totalReviews === 1 ? 'avaliação publicada' : 'avaliações publicadas' }}</span>
+                    <span class="text-gray-400 font-normal">{{ profile.totalReviews === 1 ? 'avaliação' : 'avaliações' }}</span>
                   </div>
+
                   <div class="inline-flex items-center gap-1.5 bg-[#12161a] px-3 py-1 rounded-full text-xs font-semibold text-emerald-400 border border-[#242c34]">
                     <span>{{ userLists.length }}</span>
                     <span class="text-gray-400 font-normal">{{ userLists.length === 1 ? 'lista' : 'listas' }}</span>
@@ -114,15 +140,70 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
               </div>
             </div>
 
-            @if (isOwnProfile) {
-              <a
-                routerLink="/profile/me/edit"
-                class="bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs uppercase tracking-wider px-5 py-2.5 rounded-lg transition-colors shadow-md"
-              >
-                Customizar Perfil
-              </a>
-            }
+            <!-- Botão de Ação (Customizar Perfil ou Seguir/Seguindo) -->
+            <div class="flex flex-col items-stretch sm:items-end gap-3 shrink-0">
+              @if (isOwnProfile) {
+                <a
+                  routerLink="/profile/me/edit"
+                  class="bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs uppercase tracking-wider px-5 py-2.5 rounded-lg transition-colors shadow-md text-center"
+                >
+                  Customizar Perfil
+                </a>
+              } @else {
+                <button
+                  type="button"
+                  (click)="toggleFollow()"
+                  [disabled]="togglingFollow"
+                  class="cursor-pointer font-bold text-xs uppercase tracking-wider px-6 py-2.5 rounded-lg transition-all shadow-md"
+                  [ngClass]="profile.followedByMe
+                    ? 'bg-[#242c34] hover:bg-red-500/20 text-gray-200 hover:text-red-400 border border-[#323e4a] hover:border-red-500/40'
+                    : 'bg-emerald-500 hover:bg-emerald-400 text-black'"
+                >
+                  {{ profile.followedByMe ? '✓ Seguindo' : '+ Seguir' }}
+                </button>
+              }
+            </div>
           </div>
+
+          <!-- Card de Compatibilidade Musical (Taste Match %) quando visita outro perfil -->
+          @if (authService.isAuthenticated() && !isOwnProfile) {
+            <div class="mt-6 pt-5 border-t border-[#242c34] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              @if (profile.tasteMatchPercentage !== null && profile.tasteMatchPercentage !== undefined) {
+                <div class="flex items-center gap-3.5">
+                  <div
+                    class="w-12 h-12 rounded-xl flex items-center justify-center font-black text-sm border shrink-0 shadow"
+                    [ngClass]="getTasteMatchBadgeClasses(profile.tasteMatchPercentage)"
+                  >
+                    {{ profile.tasteMatchPercentage }}%
+                  </div>
+                  <div>
+                    <div class="flex items-center gap-2">
+                      <span class="text-xs font-black uppercase tracking-wider text-white">
+                        Compatibilidade Musical ({{ getTasteMatchLabel(profile.tasteMatchPercentage) }})
+                      </span>
+                    </div>
+                    <p class="text-[11px] text-gray-400 mt-0.5">
+                      Calculada com base em {{ profile.commonItemsCount || 1 }} {{ (profile.commonItemsCount || 1) === 1 ? 'conexão musical (álbuns, faixas ou artistas) em comum' : 'conexões musicais (álbuns, faixas ou artistas) em comum' }}.
+                    </p>
+                  </div>
+                </div>
+                <div class="w-full sm:w-48 h-2 bg-[#12161a] rounded-full overflow-hidden border border-[#242c34] shrink-0">
+                  <div
+                    class="h-full transition-all duration-500"
+                    [ngClass]="getTasteMatchBarClass(profile.tasteMatchPercentage)"
+                    [style.width.%]="profile.tasteMatchPercentage"
+                  ></div>
+                </div>
+              } @else {
+                <div class="flex items-center gap-2.5 text-xs text-gray-400">
+                  <span class="text-emerald-400 text-base">🎧</span>
+                  <span>
+                    <strong class="text-gray-200">Taste Match:</strong> Avalie alguns álbuns ou faixas que &#64;{{ profile.username }} ouviu para descobrir a compatibilidade musical entre vocês!
+                  </span>
+                </div>
+              }
+            </div>
+          }
         </div>
 
         <!-- Destaques Principais: Álbum Favorito & Música do Momento -->
@@ -213,7 +294,6 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                         <span>{{ isPlaying ? 'Tocando Agora' : 'Na vitrola de ' + profile.username }}</span>
                       </div>
 
-                      <!-- Link do Spotify para a Música do Momento -->
                       <a
                         [href]="getTrackSpotifyUrl()"
                         target="_blank"
@@ -410,9 +490,31 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                     }
 
                     <div class="flex flex-wrap items-center justify-between gap-2 mt-3 pt-2 border-t border-[#242c34]/60">
-                      <span class="text-[10px] text-gray-500">
-                        Avaliado em {{ formatDate(rev.createdAt) }}
-                      </span>
+                      <div class="flex items-center gap-4">
+                        <button
+                          type="button"
+                          (click)="toggleLikeReview(rev)"
+                          class="cursor-pointer inline-flex items-center gap-1.5 text-xs font-bold transition-colors"
+                          [ngClass]="rev.likedByMe ? 'text-rose-400' : 'text-gray-400 hover:text-rose-400'"
+                        >
+                          <span>{{ rev.likedByMe ? '♥' : '♡' }}</span>
+                          <span>{{ rev.likesCount || 0 }}</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          (click)="toggleCommentsDrawer(rev.id)"
+                          class="cursor-pointer inline-flex items-center gap-1.5 text-xs font-bold transition-colors"
+                          [ngClass]="openCommentsMap[rev.id] ? 'text-emerald-400' : 'text-gray-400 hover:text-emerald-400'"
+                        >
+                          <span>💬</span>
+                          <span>{{ rev.commentsCount || (rev.comments?.length || 0) }}</span>
+                        </button>
+
+                        <span class="text-[10px] text-gray-500">
+                          • {{ formatDate(rev.createdAt) }}
+                        </span>
+                      </div>
 
                       <div class="flex items-center gap-3">
                         <a
@@ -441,6 +543,70 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                         </button>
                       </div>
                     </div>
+
+                    @if (openCommentsMap[rev.id]) {
+                      <div class="mt-3 pt-3 border-t border-[#242c34] space-y-2.5">
+                        @if (rev.comments && rev.comments.length > 0) {
+                          <div class="space-y-2">
+                            @for (c of rev.comments; track c.id) {
+                              <div class="bg-[#14181c] border border-[#242c34] rounded-lg p-2.5 flex items-start justify-between gap-2">
+                                <div class="flex items-start gap-2 min-w-0">
+                                  <a
+                                    [routerLink]="['/profile', c.username]"
+                                    class="w-5 h-5 rounded-full bg-[#1b2228] border border-emerald-500/40 overflow-hidden flex items-center justify-center text-[9px] font-black text-white uppercase shrink-0 mt-0.5"
+                                  >
+                                    @if (c.userAvatarUrl) {
+                                      <img [src]="c.userAvatarUrl" [alt]="c.username" class="w-full h-full object-cover" />
+                                    } @else {
+                                      {{ (c.userDisplayName || c.username).substring(0, 2) }}
+                                    }
+                                  </a>
+                                  <div class="min-w-0">
+                                    <div class="flex items-center gap-2">
+                                      <a [routerLink]="['/profile', c.username]" class="text-[11px] font-bold text-emerald-400 hover:underline">
+                                        {{ c.userDisplayName || c.username }}
+                                      </a>
+                                      <span class="text-[10px] text-gray-500">{{ formatDate(c.createdAt) }}</span>
+                                    </div>
+                                    <p class="text-xs text-gray-200 mt-0.5 break-words">{{ c.content }}</p>
+                                  </div>
+                                </div>
+                                @if (canDeleteComment(c.username, rev.username)) {
+                                  <button
+                                    type="button"
+                                    (click)="deleteReviewComment(rev, c.id)"
+                                    class="cursor-pointer text-[11px] text-gray-500 hover:text-red-400 px-1"
+                                  >
+                                    ✕
+                                  </button>
+                                }
+                              </div>
+                            }
+                          </div>
+                        } @else {
+                          <p class="text-[11px] text-gray-500">Nenhum comentário ainda.</p>
+                        }
+
+                        @if (authService.isAuthenticated()) {
+                          <form (ngSubmit)="submitReviewComment(rev)" class="flex gap-2 pt-1">
+                            <input
+                              type="text"
+                              [name]="'prof-comment-' + rev.id"
+                              [(ngModel)]="commentInputs[rev.id]"
+                              placeholder="Comentar nesta avaliação..."
+                              class="flex-1 bg-[#12161a] border border-[#2a343d] rounded px-3 py-1.5 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-emerald-500"
+                            />
+                            <button
+                              type="submit"
+                              [disabled]="!commentInputs[rev.id]?.trim()"
+                              class="cursor-pointer disabled:opacity-50 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-[11px] uppercase tracking-wider px-3 py-1.5 rounded transition-colors"
+                            >
+                              Enviar
+                            </button>
+                          </form>
+                        }
+                      </div>
+                    }
                   </div>
                 </div>
               }
@@ -461,6 +627,79 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
         </div>
       }
 
+      <!-- Modal de Seguidores / Seguindo -->
+      @if (followModalOpen) {
+        <div
+          class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+          (click)="followModalOpen = false"
+        >
+          <div
+            class="bg-[#1b2228] border border-[#2a343d] rounded-2xl max-w-md w-full p-5 shadow-2xl animate-dropdown"
+            (click)="$event.stopPropagation()"
+          >
+            <div class="flex items-center justify-between pb-3 mb-4 border-b border-[#242c34]">
+              <h3 class="text-sm font-black uppercase tracking-wider text-white">
+                {{ followModalTab === 'followers' ? 'Seguidores' : 'Seguindo' }} de &#64;{{ profile?.username }}
+              </h3>
+              <button
+                type="button"
+                (click)="followModalOpen = false"
+                class="cursor-pointer text-gray-400 hover:text-white text-sm px-2 py-0.5 rounded"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div class="max-h-80 overflow-y-auto divide-y divide-[#242c34]">
+              @if (loadingFollowList) {
+                <div class="py-8 text-center text-xs text-gray-400">Carregando...</div>
+              } @else if (followUsersList.length > 0) {
+                @for (u of followUsersList; track u.username) {
+                  <div class="py-3 flex items-center justify-between gap-3">
+                    <a
+                      [routerLink]="['/profile', u.username]"
+                      (click)="followModalOpen = false"
+                      class="flex items-center gap-3 min-w-0 group"
+                    >
+                      <div class="w-9 h-9 rounded-full bg-[#12161a] border border-emerald-500/60 overflow-hidden flex items-center justify-center text-xs font-black text-white uppercase shrink-0">
+                        @if (u.avatarUrl) {
+                          <img [src]="u.avatarUrl" [alt]="u.username" class="w-full h-full object-cover" />
+                        } @else {
+                          {{ (u.displayName || u.username).substring(0, 2) }}
+                        }
+                      </div>
+                      <div class="min-w-0">
+                        <p class="text-xs font-bold text-white group-hover:text-emerald-400 truncate">
+                          {{ u.displayName || u.username }}
+                        </p>
+                        <p class="text-[11px] text-gray-400 truncate">&#64;{{ u.username }}</p>
+                      </div>
+                    </a>
+
+                    @if (authService.isAuthenticated() && authService.currentUser()?.toLowerCase() !== u.username.toLowerCase()) {
+                      <button
+                        type="button"
+                        (click)="toggleFollowUserInModal(u)"
+                        class="cursor-pointer text-[11px] font-bold uppercase tracking-wider px-3 py-1 rounded transition-colors shrink-0"
+                        [ngClass]="u.followedByMe
+                          ? 'bg-[#242c34] text-gray-300 hover:text-red-400 border border-[#323e4a]'
+                          : 'bg-emerald-500 hover:bg-emerald-400 text-black'"
+                      >
+                        {{ u.followedByMe ? 'Seguindo' : 'Seguir' }}
+                      </button>
+                    }
+                  </div>
+                }
+              } @else {
+                <div class="py-8 text-center text-xs text-gray-500">
+                  {{ followModalTab === 'followers' ? 'Nenhum seguidor ainda.' : 'Ainda não segue ninguém.' }}
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+      }
+
       <app-share-card-modal
         [open]="shareModalOpen"
         [data]="shareCardData"
@@ -476,6 +715,7 @@ export class ProfileViewComponent implements OnInit, OnDestroy {
   private listsService = inject(ListsService);
   private catalogService = inject(CatalogService);
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
   private titleService = inject(Title);
   private metaService = inject(Meta);
 
@@ -483,6 +723,15 @@ export class ProfileViewComponent implements OnInit, OnDestroy {
   userReviews: ReviewResponse[] = [];
   userLists: AlbumListSummaryResponse[] = [];
   loading = true;
+  togglingFollow = false;
+
+  followModalOpen = false;
+  followModalTab: 'followers' | 'following' = 'followers';
+  followUsersList: FollowUserResponse[] = [];
+  loadingFollowList = false;
+
+  openCommentsMap: Record<string, boolean> = {};
+  commentInputs: Record<string, string> = {};
 
   copiedProfileLink = false;
   copiedReviewId: string | null = null;
@@ -509,6 +758,7 @@ export class ProfileViewComponent implements OnInit, OnDestroy {
       const username = params.get('username');
       if (username) {
         this.stopAudio();
+        this.followModalOpen = false;
         this.loadProfile(username);
       }
     });
@@ -530,6 +780,123 @@ export class ProfileViewComponent implements OnInit, OnDestroy {
       error: () => {
         this.profile = null;
         this.loading = false;
+      }
+    });
+  }
+
+  toggleFollow(): void {
+    if (!this.profile) return;
+    if (!this.authService.isAuthenticated()) {
+      this.router.navigate(['/login']);
+      return;
+    }
+
+    this.togglingFollow = true;
+    this.profileService.toggleFollow(this.profile.username).subscribe({
+      next: (updated) => {
+        this.profile = updated;
+        this.togglingFollow = false;
+      },
+      error: () => {
+        this.togglingFollow = false;
+      }
+    });
+  }
+
+  openFollowModal(tab: 'followers' | 'following'): void {
+    if (!this.profile) return;
+    this.followModalTab = tab;
+    this.followModalOpen = true;
+    this.loadingFollowList = true;
+    this.followUsersList = [];
+
+    const req$ = tab === 'followers'
+      ? this.profileService.getFollowers(this.profile.username)
+      : this.profileService.getFollowing(this.profile.username);
+
+    req$.subscribe({
+      next: (users) => {
+        this.followUsersList = users || [];
+        this.loadingFollowList = false;
+      },
+      error: () => {
+        this.followUsersList = [];
+        this.loadingFollowList = false;
+      }
+    });
+  }
+
+  toggleFollowUserInModal(u: FollowUserResponse): void {
+    this.profileService.toggleFollow(u.username).subscribe({
+      next: () => {
+        u.followedByMe = !u.followedByMe;
+        if (this.profile && this.isOwnProfile) {
+          this.loadProfile(this.profile.username);
+        }
+      }
+    });
+  }
+
+  getTasteMatchLabel(pct: number): string {
+    if (pct >= 85) return 'Almas Gêmeas Sonoras 🔥';
+    if (pct >= 70) return 'Sintonia Alta ✨';
+    if (pct >= 50) return 'Boa Sintonia 🎧';
+    return 'Gostos Diferentes 🎲';
+  }
+
+  getTasteMatchBadgeClasses(pct: number): string {
+    if (pct >= 75) return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40';
+    if (pct >= 50) return 'bg-amber-500/20 text-amber-400 border-amber-500/40';
+    return 'bg-sky-500/20 text-sky-400 border-sky-500/40';
+  }
+
+  getTasteMatchBarClass(pct: number): string {
+    if (pct >= 75) return 'bg-emerald-400';
+    if (pct >= 50) return 'bg-amber-400';
+    return 'bg-sky-400';
+  }
+
+  toggleLikeReview(rev: ReviewResponse): void {
+    if (!this.authService.isAuthenticated()) {
+      this.router.navigate(['/login']);
+      return;
+    }
+    this.reviewsService.toggleLike(rev.id).subscribe({
+      next: (updated) => {
+        rev.likedByMe = updated.likedByMe;
+        rev.likesCount = updated.likesCount;
+      }
+    });
+  }
+
+  toggleCommentsDrawer(reviewId: string): void {
+    this.openCommentsMap[reviewId] = !this.openCommentsMap[reviewId];
+  }
+
+  submitReviewComment(rev: ReviewResponse): void {
+    const text = (this.commentInputs[rev.id] || '').trim();
+    if (!text) return;
+
+    this.reviewsService.addComment(rev.id, { content: text }).subscribe({
+      next: (comment) => {
+        rev.comments = [...(rev.comments || []), comment];
+        rev.commentsCount = rev.comments.length;
+        this.commentInputs[rev.id] = '';
+      }
+    });
+  }
+
+  canDeleteComment(commentAuthor: string, reviewOwner: string): boolean {
+    const current = this.authService.currentUser()?.toLowerCase();
+    if (!current) return false;
+    return current === commentAuthor.toLowerCase() || current === reviewOwner.toLowerCase();
+  }
+
+  deleteReviewComment(rev: ReviewResponse, commentId: string): void {
+    this.reviewsService.deleteComment(rev.id, commentId).subscribe({
+      next: () => {
+        rev.comments = (rev.comments || []).filter(c => c.id !== commentId);
+        rev.commentsCount = rev.comments.length;
       }
     });
   }

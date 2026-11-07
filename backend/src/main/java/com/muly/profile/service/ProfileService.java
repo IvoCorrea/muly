@@ -9,41 +9,66 @@ import com.muly.catalog.service.SpotifyService;
 import com.muly.common.exception.ResourceNotFoundException;
 import com.muly.profile.dto.*;
 import com.muly.profile.model.TopAlbum;
+import com.muly.profile.model.UserFollow;
 import com.muly.profile.repository.TopAlbumRepository;
+import com.muly.profile.repository.UserFollowRepository;
+import com.muly.reviews.model.Review;
+import com.muly.reviews.model.TrackReview;
+import com.muly.reviews.repository.ReviewRepository;
+import com.muly.reviews.repository.TrackReviewRepository;
 import com.muly.reviews.service.ReviewService;
+import com.muly.social.service.NotificationService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class ProfileService {
 
     private final TopAlbumRepository topAlbumRepository;
+    private final UserFollowRepository userFollowRepository;
+    private final ReviewRepository reviewRepository;
+    private final TrackReviewRepository trackReviewRepository;
     private final UserService userService;
     private final CatalogService catalogService;
     private final ReviewService reviewService;
     private final SpotifyService spotifyService;
     private final ImageKitService imageKitService;
+    private final NotificationService notificationService;
 
     public ProfileService(
             TopAlbumRepository topAlbumRepository,
+            UserFollowRepository userFollowRepository,
+            ReviewRepository reviewRepository,
+            TrackReviewRepository trackReviewRepository,
             UserService userService,
             CatalogService catalogService,
             ReviewService reviewService,
             SpotifyService spotifyService,
-            ImageKitService imageKitService
+            ImageKitService imageKitService,
+            NotificationService notificationService
     ) {
         this.topAlbumRepository = topAlbumRepository;
+        this.userFollowRepository = userFollowRepository;
+        this.reviewRepository = reviewRepository;
+        this.trackReviewRepository = trackReviewRepository;
         this.userService = userService;
         this.catalogService = catalogService;
         this.reviewService = reviewService;
         this.spotifyService = spotifyService;
         this.imageKitService = imageKitService;
+        this.notificationService = notificationService;
     }
 
     @Transactional(readOnly = true)
     public UserProfileResponse getProfile(String username) {
+        return getProfile(username, null);
+    }
+
+    @Transactional(readOnly = true)
+    public UserProfileResponse getProfile(String username, String viewerUsername) {
         String normalizedUsername = username.trim().toLowerCase(Locale.ROOT);
         User user = userService.getByUsername(normalizedUsername);
 
@@ -61,6 +86,24 @@ public class ProfileService {
                 .toList();
 
         long totalReviews = reviewService.countReviewsByUser(user.getUsername());
+        long followersCount = userFollowRepository.countByFollowingUsername(user.getUsername());
+        long followingCount = userFollowRepository.countByFollowerUsername(user.getUsername());
+
+        boolean followedByMe = false;
+        boolean followsMe = false;
+        Integer tasteMatchPercentage = null;
+        int commonItemsCount = 0;
+
+        if (viewerUsername != null && !viewerUsername.isBlank()) {
+            String normViewer = viewerUsername.trim().toLowerCase(Locale.ROOT);
+            if (!normViewer.equals(user.getUsername())) {
+                followedByMe = userFollowRepository.existsByFollowerUsernameAndFollowingUsername(normViewer, user.getUsername());
+                followsMe = userFollowRepository.existsByFollowerUsernameAndFollowingUsername(user.getUsername(), normViewer);
+                TasteMatchResult match = computeTasteMatch(normViewer, user, topEntities);
+                tasteMatchPercentage = match.percentage();
+                commonItemsCount = match.commonCount();
+            }
+        }
 
         CurrentTrackResponse currentTrack = null;
         if (user.getCurrentTrackTitle() != null && !user.getCurrentTrackTitle().isBlank()) {
@@ -89,8 +132,290 @@ public class ProfileService {
                 favoriteAlbum,
                 currentTrack,
                 topAlbums,
-                totalReviews
+                totalReviews,
+                followersCount,
+                followingCount,
+                followedByMe,
+                followsMe,
+                tasteMatchPercentage,
+                commonItemsCount
         );
+    }
+
+    private record TasteMatchResult(Integer percentage, int commonCount) {}
+
+    private TasteMatchResult computeTasteMatch(String viewerUsername, User targetUser, List<TopAlbum> targetTopEntities) {
+        try {
+            User viewerUser = userService.getByUsername(viewerUsername);
+            List<Review> targetAlbumRevs = reviewRepository.findByUserUsernameOrderByCreatedAtDesc(targetUser.getUsername());
+            List<Review> viewerAlbumRevs = reviewRepository.findByUserUsernameOrderByCreatedAtDesc(viewerUser.getUsername());
+
+            List<TrackReview> targetTrackRevs = trackReviewRepository.findByUserUsernameOrderByCreatedAtDesc(targetUser.getUsername());
+            List<TrackReview> viewerTrackRevs = trackReviewRepository.findByUserUsernameOrderByCreatedAtDesc(viewerUser.getUsername());
+
+            List<TopAlbum> viewerTopEntities = topAlbumRepository.findByUserUsernameOrderByPositionAsc(viewerUser.getUsername());
+
+            Map<String, Double> targetAlbumRatings = new HashMap<>();
+            Map<String, List<Double>> targetArtistRatings = new HashMap<>();
+            for (Review r : targetAlbumRevs) {
+                targetAlbumRatings.put(r.getAlbum().getExternalId(), r.getRating());
+                if (r.getAlbum().getArtist() != null) {
+                    targetArtistRatings.computeIfAbsent(r.getAlbum().getArtist().trim().toLowerCase(Locale.ROOT), k -> new ArrayList<>())
+                            .add(r.getRating());
+                }
+            }
+
+            Map<String, Double> viewerAlbumRatings = new HashMap<>();
+            Map<String, List<Double>> viewerArtistRatings = new HashMap<>();
+            for (Review r : viewerAlbumRevs) {
+                viewerAlbumRatings.put(r.getAlbum().getExternalId(), r.getRating());
+                if (r.getAlbum().getArtist() != null) {
+                    viewerArtistRatings.computeIfAbsent(r.getAlbum().getArtist().trim().toLowerCase(Locale.ROOT), k -> new ArrayList<>())
+                            .add(r.getRating());
+                }
+            }
+
+            Map<String, Double> targetTrackRatings = new HashMap<>();
+            for (TrackReview tr : targetTrackRevs) {
+                String key = tr.getAlbum().getExternalId() + "#" + tr.getTrackNumber();
+                targetTrackRatings.put(key, tr.getRating());
+                if (tr.getAlbum().getArtist() != null) {
+                    targetArtistRatings.computeIfAbsent(tr.getAlbum().getArtist().trim().toLowerCase(Locale.ROOT), k -> new ArrayList<>())
+                            .add(tr.getRating());
+                }
+            }
+
+            Map<String, Double> viewerTrackRatings = new HashMap<>();
+            for (TrackReview tr : viewerTrackRevs) {
+                String key = tr.getAlbum().getExternalId() + "#" + tr.getTrackNumber();
+                viewerTrackRatings.put(key, tr.getRating());
+                if (tr.getAlbum().getArtist() != null) {
+                    viewerArtistRatings.computeIfAbsent(tr.getAlbum().getArtist().trim().toLowerCase(Locale.ROOT), k -> new ArrayList<>())
+                            .add(tr.getRating());
+                }
+            }
+
+            Set<String> targetFavExternalIds = new HashSet<>();
+            for (TopAlbum top : targetTopEntities) {
+                targetFavExternalIds.add(top.getAlbum().getExternalId());
+                if (top.getAlbum().getArtist() != null) {
+                    targetArtistRatings.computeIfAbsent(top.getAlbum().getArtist().trim().toLowerCase(Locale.ROOT), k -> new ArrayList<>())
+                            .add(5.0);
+                }
+            }
+            if (targetUser.getFavoriteAlbumId() != null) {
+                try {
+                    AlbumResponse fav = catalogService.getAlbumById(targetUser.getFavoriteAlbumId());
+                    targetFavExternalIds.add(fav.externalId());
+                    if (fav.artist() != null) {
+                        targetArtistRatings.computeIfAbsent(fav.artist().trim().toLowerCase(Locale.ROOT), k -> new ArrayList<>())
+                                .add(5.0);
+                    }
+                } catch (ResourceNotFoundException ignored) {
+                }
+            }
+
+            Set<String> viewerFavExternalIds = new HashSet<>();
+            for (TopAlbum top : viewerTopEntities) {
+                viewerFavExternalIds.add(top.getAlbum().getExternalId());
+                if (top.getAlbum().getArtist() != null) {
+                    viewerArtistRatings.computeIfAbsent(top.getAlbum().getArtist().trim().toLowerCase(Locale.ROOT), k -> new ArrayList<>())
+                            .add(5.0);
+                }
+            }
+            if (viewerUser.getFavoriteAlbumId() != null) {
+                try {
+                    AlbumResponse fav = catalogService.getAlbumById(viewerUser.getFavoriteAlbumId());
+                    viewerFavExternalIds.add(fav.externalId());
+                    if (fav.artist() != null) {
+                        viewerArtistRatings.computeIfAbsent(fav.artist().trim().toLowerCase(Locale.ROOT), k -> new ArrayList<>())
+                                .add(5.0);
+                    }
+                } catch (ResourceNotFoundException ignored) {
+                }
+            }
+
+            List<Double> similarities = new ArrayList<>();
+            Set<String> countedAlbums = new HashSet<>();
+
+            // 1. Common rated albums
+            for (Map.Entry<String, Double> entry : targetAlbumRatings.entrySet()) {
+                String extId = entry.getKey();
+                if (viewerAlbumRatings.containsKey(extId)) {
+                    double diff = Math.abs(entry.getValue() - viewerAlbumRatings.get(extId));
+                    similarities.add(Math.max(0.0, 1.0 - (diff / 4.5)));
+                    countedAlbums.add(extId);
+                }
+            }
+
+            // 2. Common rated tracks
+            for (Map.Entry<String, Double> entry : targetTrackRatings.entrySet()) {
+                String trackKey = entry.getKey();
+                if (viewerTrackRatings.containsKey(trackKey)) {
+                    double diff = Math.abs(entry.getValue() - viewerTrackRatings.get(trackKey));
+                    similarities.add(Math.max(0.0, 1.0 - (diff / 4.5)));
+                }
+            }
+
+            // 3. Shared or cross-rated Top 4 / Favorite albums
+            for (String extId : targetFavExternalIds) {
+                if (countedAlbums.contains(extId)) {
+                    continue;
+                }
+                if (viewerFavExternalIds.contains(extId)) {
+                    similarities.add(1.0);
+                    countedAlbums.add(extId);
+                } else if (viewerAlbumRatings.containsKey(extId)) {
+                    similarities.add(viewerAlbumRatings.get(extId) / 5.0);
+                    countedAlbums.add(extId);
+                }
+            }
+            for (String extId : viewerFavExternalIds) {
+                if (countedAlbums.contains(extId)) {
+                    continue;
+                }
+                if (targetAlbumRatings.containsKey(extId)) {
+                    similarities.add(targetAlbumRatings.get(extId) / 5.0);
+                    countedAlbums.add(extId);
+                }
+            }
+
+            // 4. Shared artists
+            for (Map.Entry<String, List<Double>> entry : targetArtistRatings.entrySet()) {
+                String artist = entry.getKey();
+                if (viewerArtistRatings.containsKey(artist)) {
+                    double avg1 = entry.getValue().stream().mapToDouble(Double::doubleValue).average().orElse(4.0);
+                    double avg2 = viewerArtistRatings.get(artist).stream().mapToDouble(Double::doubleValue).average().orElse(4.0);
+                    double diff = Math.abs(avg1 - avg2);
+                    similarities.add(Math.max(0.0, 1.0 - (diff / 4.5)));
+                }
+            }
+
+            if (similarities.isEmpty()) {
+                return new TasteMatchResult(null, 0);
+            }
+
+            double avgSim = similarities.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
+            int pct = (int) Math.round(avgSim * 100.0);
+            pct = Math.max(5, Math.min(100, pct));
+            return new TasteMatchResult(pct, similarities.size());
+        } catch (Exception e) {
+            return new TasteMatchResult(null, 0);
+        }
+    }
+
+    @Transactional
+    public UserProfileResponse toggleFollow(String followerUsername, String targetUsername) {
+        String normFollower = followerUsername.trim().toLowerCase(Locale.ROOT);
+        String normTarget = targetUsername.trim().toLowerCase(Locale.ROOT);
+
+        if (normFollower.equals(normTarget)) {
+            throw new IllegalArgumentException("Você não pode seguir a si mesmo.");
+        }
+
+        User follower = userService.getByUsername(normFollower);
+        User target = userService.getByUsername(normTarget);
+
+        Optional<UserFollow> existing = userFollowRepository.findByFollowerUsernameAndFollowingUsername(
+                follower.getUsername(),
+                target.getUsername()
+        );
+
+        if (existing.isPresent()) {
+            userFollowRepository.delete(existing.get());
+        } else {
+            UserFollow follow = UserFollow.builder()
+                    .follower(follower)
+                    .following(target)
+                    .build();
+            userFollowRepository.save(follow);
+
+            notificationService.createNotification(
+                    target,
+                    follower,
+                    "FOLLOW",
+                    "começou a seguir você",
+                    "/profile/" + follower.getUsername()
+            );
+        }
+        userFollowRepository.flush();
+
+        return getProfile(target.getUsername(), follower.getUsername());
+    }
+
+    @Transactional(readOnly = true)
+    public List<FollowUserResponse> getFollowers(String username, String viewerUsername) {
+        User user = userService.getByUsername(username);
+        Set<String> viewerFollowing = getViewerFollowingSet(viewerUsername);
+
+        return userFollowRepository.findByFollowingUsernameOrderByCreatedAtDesc(user.getUsername())
+                .stream()
+                .map(UserFollow::getFollower)
+                .map(u -> new FollowUserResponse(
+                        u.getUsername(),
+                        u.getDisplayName(),
+                        u.getAvatarUrl(),
+                        u.getBio(),
+                        viewerFollowing.contains(u.getUsername().toLowerCase(Locale.ROOT))
+                ))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<FollowUserResponse> getFollowing(String username, String viewerUsername) {
+        User user = userService.getByUsername(username);
+        Set<String> viewerFollowing = getViewerFollowingSet(viewerUsername);
+
+        return userFollowRepository.findByFollowerUsernameOrderByCreatedAtDesc(user.getUsername())
+                .stream()
+                .map(UserFollow::getFollowing)
+                .map(u -> new FollowUserResponse(
+                        u.getUsername(),
+                        u.getDisplayName(),
+                        u.getAvatarUrl(),
+                        u.getBio(),
+                        viewerFollowing.contains(u.getUsername().toLowerCase(Locale.ROOT))
+                ))
+                .toList();
+    }
+
+    private Set<String> getViewerFollowingSet(String viewerUsername) {
+        if (viewerUsername == null || viewerUsername.isBlank()) {
+            return Set.of();
+        }
+        String normViewer = viewerUsername.trim().toLowerCase(Locale.ROOT);
+        return userFollowRepository.findByFollowerUsernameOrderByCreatedAtDesc(normViewer)
+                .stream()
+                .map(f -> f.getFollowing().getUsername().toLowerCase(Locale.ROOT))
+                .collect(Collectors.toSet());
+    }
+
+    @Transactional
+    public UserProfileResponse updateFullProfile(String username, UpdateFullProfileRequest request) {
+        if (request == null) {
+            return getProfile(username, username);
+        }
+
+        updateProfileInfo(username, new UpdateProfileInfoRequest(
+                request.displayName(),
+                request.bio(),
+                request.spotifyProfileUrl(),
+                request.lastfmProfileUrl()
+        ));
+
+        setFavoriteAlbum(username, new SetFavoriteAlbumRequest(request.favoriteAlbumSpotifyId()));
+
+        if (request.currentTrack() != null) {
+            setCurrentTrack(username, request.currentTrack());
+        } else {
+            setCurrentTrack(username, new SetCurrentTrackRequest(null, null, null, null, null, null));
+        }
+
+        updateTopAlbums(username, new UpdateTopAlbumsRequest(
+                request.topAlbums() != null ? request.topAlbums() : List.of()
+        ));
+
+        return getProfile(username, username);
     }
 
     @Transactional

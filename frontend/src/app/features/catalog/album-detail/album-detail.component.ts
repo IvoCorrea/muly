@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, inject, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Meta, Title } from '@angular/platform-browser';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AlbumDetailResponse, AlbumTrackResponse } from '../../../core/models/catalog.models';
 import { AlbumReviewsSummaryResponse, ReviewResponse } from '../../../core/models/reviews.models';
 import { AuthService } from '../../../core/services/auth.service';
@@ -85,7 +85,7 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                   <div class="h-8 w-px bg-[#2a343d]"></div>
                   <div>
                     <app-star-rating [rating]="reviewsSummary?.averageRating || 0" [readonly]="true" [showValue]="false" />
-                    <span class="text-[11px] text-gray-400">
+                    <span class="text-[11px] text-gray-400 block">
                       {{ reviewsSummary?.totalReviews || 0 }} {{ reviewsSummary?.totalReviews === 1 ? 'avaliação' : 'avaliações' }}
                     </span>
                   </div>
@@ -105,13 +105,45 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                     <div class="h-8 w-px bg-emerald-500/20"></div>
                     <div>
                       <app-star-rating [rating]="getTrackAverageRating(selectedTrack.trackNumber) || 0" [readonly]="true" [showValue]="false" />
-                      <span class="text-[11px] text-emerald-300">
+                      <span class="text-[11px] text-emerald-300 block">
                         {{ getTrackReviewsCount(selectedTrack.trackNumber) }} {{ getTrackReviewsCount(selectedTrack.trackNumber) === 1 ? 'avaliação da faixa' : 'avaliações da faixa' }}
                       </span>
                     </div>
                   </div>
                 }
               </div>
+
+              <!-- Amigos que já ouviram -->
+              @if (reviewsSummary?.friendsReviews && reviewsSummary!.friendsReviews!.length > 0) {
+                <div class="mt-4 bg-[#182026] border border-emerald-500/25 rounded-lg p-3.5">
+                  <span class="text-[10px] font-black uppercase tracking-widest text-emerald-400 block mb-2">
+                    👥 Amigos que já ouviram ({{ reviewsSummary!.friendsReviews!.length }})
+                  </span>
+                  <div class="flex flex-wrap items-center gap-2">
+                    @for (friendRev of reviewsSummary!.friendsReviews!; track friendRev.id) {
+                      <button
+                        type="button"
+                        (click)="focusReview(friendRev.id)"
+                        class="cursor-pointer inline-flex items-center gap-2 bg-[#12161a] hover:bg-[#222b33] border border-[#2a343d] hover:border-emerald-500/40 px-2.5 py-1.5 rounded-full transition-colors text-xs"
+                        [title]="friendRev.reviewText || ('Ver avaliação de @' + friendRev.username)"
+                      >
+                        <span class="w-5 h-5 rounded-full bg-[#1b2228] border border-emerald-500/50 overflow-hidden flex items-center justify-center text-[9px] font-black text-white uppercase shrink-0">
+                          @if (friendRev.userAvatarUrl) {
+                            <img [src]="friendRev.userAvatarUrl" [alt]="friendRev.username" class="w-full h-full object-cover" />
+                          } @else {
+                            {{ (friendRev.userDisplayName || friendRev.username).substring(0, 2) }}
+                          }
+                        </span>
+                        <span class="font-bold text-gray-200">&#64;{{ friendRev.username }}</span>
+                        @if (friendRev.trackNumber !== null) {
+                          <span class="text-[10px] text-gray-400">(#{{ friendRev.trackNumber }})</span>
+                        }
+                        <span class="font-black text-emerald-400">★ {{ friendRev.rating.toFixed(1) }}</span>
+                      </button>
+                    }
+                  </div>
+                </div>
+              }
             </div>
 
             <!-- Caixa de Avaliação do Usuário -->
@@ -157,7 +189,7 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                         <option [ngValue]="0">💿 Álbum Completo</option>
                         @for (track of album.tracks; track track.trackNumber) {
                           <option [ngValue]="track.trackNumber">
-                            🎵 {{ track.trackNumber }}. {{ track.title }} {{ getMyTrackReview(track.trackNumber) ? ' (★ ' + getMyTrackReview(track.trackNumber)!.rating + ')' : '' }}
+                            🎵 {{ track.trackNumber }}. {{ track.title }} {{ getMyTrackReview(track.trackNumber) ? ' (★ ' + getMyTrackReview(track.trackNumber)!.rating.toFixed(1) + ')' : '' }}
                           </option>
                         }
                       </select>
@@ -165,14 +197,14 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                   }
                 </div>
 
-                <div class="flex items-center gap-4 mb-3">
+                <div class="flex flex-wrap items-center gap-4 mb-3">
                   <app-star-rating
                     [rating]="userRating"
                     [readonly]="false"
                     (ratingChange)="onRatingSelected($event)"
                   />
                   <span class="text-xs text-gray-400">
-                    {{ currentActiveReview ? 'Sua nota salva (clique para alterar)' : 'Clique para selecionar a nota' }}
+                    {{ currentActiveReview ? 'Sua nota salva (passe na metade esquerda da estrela para ½ ★)' : 'Clique na metade esquerda da estrela para ½ ★ ou direita para ★ inteira' }}
                   </span>
                 </div>
 
@@ -392,26 +424,117 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                         }
                         <span class="text-[11px] text-gray-500">• {{ formatDate(rev.createdAt) }}</span>
                       </div>
-                      <div class="flex items-center gap-3">
-                        <app-star-rating [rating]="rev.rating" [readonly]="true" />
-                        <button
-                          type="button"
-                          (click)="shareReview(rev)"
-                          class="cursor-pointer inline-flex items-center gap-1 text-[11px] font-semibold text-gray-400 hover:text-emerald-400 transition-colors"
-                          title="Copiar link de compartilhamento desta review"
-                        >
-                          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                          </svg>
-                          <span>{{ copiedReviewId === rev.id ? 'Copiado! ✓' : 'Compartilhar' }}</span>
-                        </button>
-                      </div>
+                      <app-star-rating [rating]="rev.rating" [readonly]="true" />
                     </div>
 
                     @if (rev.reviewText) {
                       <p class="text-xs text-gray-300 leading-relaxed mt-2 whitespace-pre-wrap">
                         {{ rev.reviewText }}
                       </p>
+                    }
+
+                    <!-- Barra de Ações da Review: Curtir, Comentar e Compartilhar -->
+                    <div class="flex items-center justify-between mt-3 pt-2.5 border-t border-[#242c34]/80">
+                      <div class="flex items-center gap-4">
+                        <button
+                          type="button"
+                          (click)="toggleLikeReview(rev)"
+                          class="cursor-pointer inline-flex items-center gap-1.5 text-xs font-bold transition-colors"
+                          [ngClass]="rev.likedByMe ? 'text-rose-400' : 'text-gray-400 hover:text-rose-400'"
+                        >
+                          <span>{{ rev.likedByMe ? '♥' : '♡' }}</span>
+                          <span>{{ rev.likesCount || 0 }}</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          (click)="toggleCommentsDrawer(rev.id)"
+                          class="cursor-pointer inline-flex items-center gap-1.5 text-xs font-bold transition-colors"
+                          [ngClass]="openCommentsMap[rev.id] ? 'text-emerald-400' : 'text-gray-400 hover:text-emerald-400'"
+                        >
+                          <span>💬</span>
+                          <span>{{ rev.commentsCount || (rev.comments?.length || 0) }}</span>
+                        </button>
+                      </div>
+
+                      <button
+                        type="button"
+                        (click)="shareReview(rev)"
+                        class="cursor-pointer inline-flex items-center gap-1 text-[11px] font-semibold text-gray-400 hover:text-emerald-400 transition-colors"
+                        title="Copiar link de compartilhamento desta review"
+                      >
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                        </svg>
+                        <span>{{ copiedReviewId === rev.id ? 'Copiado! ✓' : 'Compartilhar' }}</span>
+                      </button>
+                    </div>
+
+                    <!-- Gaveta de Comentários da Review -->
+                    @if (openCommentsMap[rev.id]) {
+                      <div class="mt-3 pt-3 border-t border-[#242c34] space-y-2.5">
+                        @if (rev.comments && rev.comments.length > 0) {
+                          <div class="space-y-2">
+                            @for (c of rev.comments; track c.id) {
+                              <div class="bg-[#14181c] border border-[#242c34] rounded-lg p-2.5 flex items-start justify-between gap-2">
+                                <div class="flex items-start gap-2 min-w-0">
+                                  <a
+                                    [routerLink]="['/profile', c.username]"
+                                    class="w-5 h-5 rounded-full bg-[#1b2228] border border-emerald-500/40 overflow-hidden flex items-center justify-center text-[9px] font-black text-white uppercase shrink-0 mt-0.5"
+                                  >
+                                    @if (c.userAvatarUrl) {
+                                      <img [src]="c.userAvatarUrl" [alt]="c.username" class="w-full h-full object-cover" />
+                                    } @else {
+                                      {{ (c.userDisplayName || c.username).substring(0, 2) }}
+                                    }
+                                  </a>
+                                  <div class="min-w-0">
+                                    <div class="flex items-center gap-2">
+                                      <a [routerLink]="['/profile', c.username]" class="text-[11px] font-bold text-emerald-400 hover:underline">
+                                        {{ c.userDisplayName || c.username }}
+                                      </a>
+                                      <span class="text-[10px] text-gray-500">{{ formatDate(c.createdAt) }}</span>
+                                    </div>
+                                    <p class="text-xs text-gray-200 mt-0.5 break-words">{{ c.content }}</p>
+                                  </div>
+                                </div>
+
+                                @if (canDeleteComment(c.username, rev.username)) {
+                                  <button
+                                    type="button"
+                                    (click)="deleteReviewComment(rev, c.id)"
+                                    class="cursor-pointer text-[11px] text-gray-500 hover:text-red-400 px-1"
+                                    title="Excluir comentário"
+                                  >
+                                    ✕
+                                  </button>
+                                }
+                              </div>
+                            }
+                          </div>
+                        } @else {
+                          <p class="text-[11px] text-gray-500">Nenhum comentário ainda. Comente abaixo!</p>
+                        }
+
+                        @if (authService.isAuthenticated()) {
+                          <form (ngSubmit)="submitReviewComment(rev)" class="flex gap-2 pt-1">
+                            <input
+                              type="text"
+                              [name]="'comment-' + rev.id"
+                              [(ngModel)]="commentInputs[rev.id]"
+                              placeholder="Responder a esta avaliação..."
+                              class="flex-1 bg-[#12161a] border border-[#2a343d] rounded px-3 py-1.5 text-xs text-gray-200 placeholder-gray-500 focus:outline-none focus:border-emerald-500"
+                            />
+                            <button
+                              type="submit"
+                              [disabled]="!commentInputs[rev.id]?.trim()"
+                              class="cursor-pointer disabled:opacity-50 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-[11px] uppercase tracking-wider px-3 py-1.5 rounded transition-colors"
+                            >
+                              Enviar
+                            </button>
+                          </form>
+                        }
+                      </div>
                     }
                   </div>
                 }
@@ -453,6 +576,7 @@ export class AlbumDetailComponent implements OnInit {
   private catalogService = inject(CatalogService);
   private reviewsService = inject(ReviewsService);
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
   private titleService = inject(Title);
   private metaService = inject(Meta);
 
@@ -468,6 +592,9 @@ export class AlbumDetailComponent implements OnInit {
   copiedReviewId: string | null = null;
   shareModalOpen = false;
   shareCardData: ShareCardData | null = null;
+
+  openCommentsMap: Record<string, boolean> = {};
+  commentInputs: Record<string, string> = {};
 
   loading = true;
   savingReview = false;
@@ -516,6 +643,60 @@ export class AlbumDetailComponent implements OnInit {
       const spotifyId = params.get('spotifyId');
       if (spotifyId) {
         this.loadAlbumData(spotifyId);
+      }
+    });
+  }
+
+  focusReview(reviewId: string): void {
+    this.reviewFilter = 'all';
+    this.highlightedReviewId = reviewId;
+    setTimeout(() => {
+      const el = document.getElementById('review-' + reviewId);
+      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 50);
+  }
+
+  toggleLikeReview(rev: ReviewResponse): void {
+    if (!this.authService.isAuthenticated()) {
+      this.router.navigate(['/login']);
+      return;
+    }
+    this.reviewsService.toggleLike(rev.id).subscribe({
+      next: (updated) => {
+        rev.likedByMe = updated.likedByMe;
+        rev.likesCount = updated.likesCount;
+      }
+    });
+  }
+
+  toggleCommentsDrawer(reviewId: string): void {
+    this.openCommentsMap[reviewId] = !this.openCommentsMap[reviewId];
+  }
+
+  submitReviewComment(rev: ReviewResponse): void {
+    const text = (this.commentInputs[rev.id] || '').trim();
+    if (!text) return;
+
+    this.reviewsService.addComment(rev.id, { content: text }).subscribe({
+      next: (comment) => {
+        rev.comments = [...(rev.comments || []), comment];
+        rev.commentsCount = rev.comments.length;
+        this.commentInputs[rev.id] = '';
+      }
+    });
+  }
+
+  canDeleteComment(commentAuthor: string, reviewOwner: string): boolean {
+    const current = this.authService.currentUser()?.toLowerCase();
+    if (!current) return false;
+    return current === commentAuthor.toLowerCase() || current === reviewOwner.toLowerCase();
+  }
+
+  deleteReviewComment(rev: ReviewResponse, commentId: string): void {
+    this.reviewsService.deleteComment(rev.id, commentId).subscribe({
+      next: () => {
+        rev.comments = (rev.comments || []).filter(c => c.id !== commentId);
+        rev.commentsCount = rev.comments.length;
       }
     });
   }

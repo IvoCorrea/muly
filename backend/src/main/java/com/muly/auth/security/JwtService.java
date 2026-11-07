@@ -1,22 +1,25 @@
 package com.muly.auth.security;
 
 import io.jsonwebtoken.Jwts;
-import org.springframework.beans.factory.annotation.Value;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
-import java.util.Date;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.Date;
 
 @Service
 public class JwtService {
+    private static final long MIN_MOBILE_EXPIRATION_MS = 30L * 24 * 60 * 60 * 1000; // 30 dias
+
     private final SecretKey key;
     private final long expirationMs;
 
-    public JwtService(@Value("${jwt.secret}") String secret, @Value("${jwt.expiration-ms}") long expirationMs) {
-        this.key = Keys.hmacShaKeyFor(secret.getBytes());
-        this.expirationMs = expirationMs;
+    public JwtService(@Value("${jwt.secret}") String secret, @Value("${jwt.expiration-ms:2592000000}") long expirationMs) {
+        this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        this.expirationMs = Math.max(expirationMs, MIN_MOBILE_EXPIRATION_MS);
     }
 
     public String generateToken(String username) {
@@ -41,6 +44,6 @@ public class JwtService {
     }
 
     public boolean isTokenValid(String token, String username) {
-        return extractUsername(token).equals(username);
+        return extractUsername(token).equalsIgnoreCase(username);
     }
 }

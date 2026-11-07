@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AlbumResponse, TrackSearchResponse } from '../../../core/models/catalog.models';
 import { CurrentTrackResponse, TopAlbumItemRequest, UserProfileResponse } from '../../../core/models/profile.models';
+import { AuthService } from '../../../core/services/auth.service';
 import { CatalogService } from '../../../core/services/catalog.service';
 import { ProfileService } from '../../../core/services/profile.service';
 
@@ -40,6 +41,22 @@ interface TopSlot {
           </svg>
         </div>
       } @else {
+
+        @if (loadError) {
+          <div class="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="text-xs text-amber-300">
+              <p class="font-bold uppercase tracking-wider mb-0.5">Falha ao sincronizar perfil</p>
+              <p class="text-amber-200/80">Não foi possível carregar suas informações atuais do servidor. Recarregue antes de salvar para evitar sobrescrever seus dados.</p>
+            </div>
+            <button
+              type="button"
+              (click)="loadProfileData()"
+              class="cursor-pointer shrink-0 bg-amber-400 hover:bg-amber-300 text-black font-black text-xs uppercase tracking-wider px-4 py-2 rounded-lg transition-colors"
+            >
+              Recarregar Dados
+            </button>
+          </div>
+        }
 
         <!-- SEÇÃO 1: Foto de Perfil (ImageKit), Nome de Exibição, Bio & Redes Sociais -->
         <div class="bg-[#1b2228] border border-[#2a343d] rounded-xl p-6 mb-8">
@@ -509,7 +526,7 @@ interface TopSlot {
           <button
             type="button"
             (click)="saveProfileChanges()"
-            [disabled]="saving || uploadingAvatar"
+            [disabled]="saving || uploadingAvatar || !profileLoaded"
             class="cursor-pointer disabled:cursor-not-allowed bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black font-black uppercase tracking-wider text-xs px-6 py-3 rounded-lg transition-colors shadow-lg"
           >
             {{ saving ? 'Salvando...' : 'Salvar Alterações' }}
@@ -524,13 +541,14 @@ interface TopSlot {
 export class ProfileEditComponent implements OnInit, OnDestroy {
   private profileService = inject(ProfileService);
   private catalogService = inject(CatalogService);
+  private authService = inject(AuthService);
   private router = inject(Router);
 
   @ViewChild('favSearchContainer') favSearchContainer?: ElementRef<HTMLElement>;
   @ViewChild('trackSearchContainer') trackSearchContainer?: ElementRef<HTMLElement>;
   @ViewChild('slotSearchContainer') slotSearchContainer?: ElementRef<HTMLElement>;
 
-  currentUsername = '';
+  currentUsername = this.authService.currentUser() || '';
   displayName = '';
   bio = '';
   avatarUrl: string | null = null;
@@ -541,6 +559,8 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
   avatarError = '';
 
   loading = true;
+  loadError = false;
+  profileLoaded = false;
   saving = false;
   successMessage = '';
   errorMessage = '';
@@ -616,30 +636,73 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    if (!this.authService.isAuthenticated()) {
+      this.authService.handleSessionExpired('/profile/me/edit');
+      return;
+    }
+    this.loadProfileData();
+  }
+
+  loadProfileData(): void {
+    this.loading = true;
+    this.loadError = false;
+    this.errorMessage = '';
+
     this.profileService.getMyProfile().subscribe({
       next: (profile: UserProfileResponse) => {
-        this.currentUsername = profile.username;
-        this.displayName = profile.displayName || '';
-        this.bio = profile.bio || '';
-        this.avatarUrl = profile.avatarUrl || null;
-        this.spotifyProfileUrl = profile.spotifyProfileUrl || '';
-        this.lastfmProfileUrl = profile.lastfmProfileUrl || '';
-        this.favoriteAlbum = profile.favoriteAlbum;
-        this.currentTrack = profile.currentTrack || null;
-        if (profile.topAlbums) {
-          profile.topAlbums.forEach(item => {
-            const slot = this.topSlots.find(s => s.position === item.position);
-            if (slot) {
-              slot.album = item.album;
-            }
-          });
-        }
+        this.applyProfileData(profile);
+        this.profileLoaded = true;
+        this.loadError = false;
         this.loading = false;
       },
-      error: () => {
-        this.loading = false;
+      error: (err) => {
+        if (err.status === 401 || err.status === 403) {
+          this.loading = false;
+          this.authService.handleSessionExpired('/profile/me/edit');
+          return;
+        }
+        // Fallback para busca pública pelo username salvo caso /profile/me tenha oscilado
+        if (this.currentUsername) {
+          this.profileService.getProfile(this.currentUsername).subscribe({
+            next: (fallbackProfile) => {
+              this.applyProfileData(fallbackProfile);
+              this.profileLoaded = true;
+              this.loadError = false;
+              this.loading = false;
+            },
+            error: () => {
+              this.loadError = true;
+              this.loading = false;
+            }
+          });
+        } else {
+          this.loadError = true;
+          this.loading = false;
+        }
       }
     });
+  }
+
+  private applyProfileData(profile: UserProfileResponse): void {
+    this.currentUsername = profile.username || this.currentUsername;
+    this.displayName = profile.displayName || '';
+    this.bio = profile.bio || '';
+    this.avatarUrl = profile.avatarUrl || null;
+    this.spotifyProfileUrl = profile.spotifyProfileUrl || '';
+    this.lastfmProfileUrl = profile.lastfmProfileUrl || '';
+    this.favoriteAlbum = profile.favoriteAlbum || null;
+    this.currentTrack = profile.currentTrack || null;
+    this.topSlots.forEach(s => {
+      s.album = null;
+    });
+    if (profile.topAlbums) {
+      profile.topAlbums.forEach(item => {
+        const slot = this.topSlots.find(s => s.position === item.position);
+        if (slot) {
+          slot.album = item.album;
+        }
+      });
+    }
   }
 
   ngOnDestroy(): void {
@@ -887,11 +950,82 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
 
   saveProfileChanges(): void {
     this.stopPreview();
+
+    if (!this.authService.isAuthenticated()) {
+      this.authService.handleSessionExpired('/profile/me/edit');
+      return;
+    }
+
     this.saving = true;
     this.successMessage = '';
     this.errorMessage = '';
 
-    // 1. Atualizar Informações Básicas (DisplayName, Bio, Links Sociais)
+    const favSpotifyId = this.favoriteAlbum ? this.favoriteAlbum.externalId : null;
+    const trackPayload = this.currentTrack
+      ? {
+          title: this.currentTrack.title,
+          artist: this.currentTrack.artist,
+          albumTitle: this.currentTrack.albumTitle,
+          coverUrl: this.currentTrack.coverUrl,
+          previewUrl: this.currentTrack.previewUrl,
+          spotifyUrl: this.currentTrack.spotifyUrl || null
+        }
+      : { title: null };
+
+    const topItems: TopAlbumItemRequest[] = this.topSlots
+      .filter(s => s.album !== null)
+      .map(s => ({
+        position: s.position,
+        spotifyId: s.album!.externalId
+      }));
+
+    // Tenta salvar tudo em uma única requisição atômica (ideal para 4G/mobile)
+    this.profileService.updateFullProfile({
+      displayName: this.displayName.trim() || null,
+      bio: this.bio.trim() || null,
+      spotifyProfileUrl: this.spotifyProfileUrl.trim() || null,
+      lastfmProfileUrl: this.lastfmProfileUrl.trim() || null,
+      favoriteAlbumSpotifyId: favSpotifyId,
+      currentTrack: trackPayload,
+      topAlbums: topItems
+    }).subscribe({
+      next: (updatedProfile) => {
+        this.saving = false;
+        this.currentUsername = updatedProfile.username || this.currentUsername;
+        this.successMessage = 'Perfil atualizado com sucesso!';
+        setTimeout(() => {
+          this.router.navigate(['/profile', this.currentUsername]);
+        }, 700);
+      },
+      error: (err) => {
+        if (err.status === 401 || err.status === 403) {
+          this.saving = false;
+          this.authService.handleSessionExpired('/profile/me/edit');
+          return;
+        }
+        // Fallback caso o backend no Render ainda esteja na versão anterior sem PUT /profile/me consolidado
+        if (err.status === 404 || err.status === 405) {
+          this.saveProfileSequentialFallback(favSpotifyId, trackPayload, topItems);
+          return;
+        }
+        this.saving = false;
+        this.errorMessage = err.error?.message || 'Erro ao atualizar informações do perfil. Verifique sua conexão e tente novamente.';
+      }
+    });
+  }
+
+  private saveProfileSequentialFallback(
+    favSpotifyId: string | null,
+    trackPayload: {
+      title: string | null;
+      artist?: string | null;
+      albumTitle?: string | null;
+      coverUrl?: string | null;
+      previewUrl?: string | null;
+      spotifyUrl?: string | null;
+    },
+    topItems: TopAlbumItemRequest[]
+  ): void {
     this.profileService.updateProfileInfo({
       displayName: this.displayName.trim() || null,
       bio: this.bio.trim() || null,
@@ -899,39 +1033,17 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
       lastfmProfileUrl: this.lastfmProfileUrl.trim() || null
     }).subscribe({
       next: () => {
-        // 2. Atualizar Álbum Favorito
-        const favSpotifyId = this.favoriteAlbum ? this.favoriteAlbum.externalId : null;
         this.profileService.setFavoriteAlbum(favSpotifyId).subscribe({
           next: () => {
-            // 3. Atualizar Música do Momento
-            const trackPayload = this.currentTrack
-              ? {
-                  title: this.currentTrack.title,
-                  artist: this.currentTrack.artist,
-                  albumTitle: this.currentTrack.albumTitle,
-                  coverUrl: this.currentTrack.coverUrl,
-                  previewUrl: this.currentTrack.previewUrl,
-                  spotifyUrl: this.currentTrack.spotifyUrl || null
-                }
-              : { title: null };
-
             this.profileService.setCurrentTrack(trackPayload).subscribe({
               next: () => {
-                // 4. Atualizar Top Álbuns
-                const topItems: TopAlbumItemRequest[] = this.topSlots
-                  .filter(s => s.album !== null)
-                  .map(s => ({
-                    position: s.position,
-                    spotifyId: s.album!.externalId
-                  }));
-
                 this.profileService.updateTopAlbums({ topAlbums: topItems }).subscribe({
                   next: () => {
                     this.saving = false;
                     this.successMessage = 'Perfil atualizado com sucesso!';
                     setTimeout(() => {
                       this.router.navigate(['/profile', this.currentUsername]);
-                    }, 900);
+                    }, 700);
                   },
                   error: (err) => {
                     this.saving = false;
@@ -953,6 +1065,10 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
       },
       error: (err) => {
         this.saving = false;
+        if (err.status === 401 || err.status === 403) {
+          this.authService.handleSessionExpired('/profile/me/edit');
+          return;
+        }
         this.errorMessage = err.error?.message || 'Erro ao atualizar informações do perfil.';
       }
     });

@@ -16,6 +16,12 @@ public record UserProfileResponse(
         AlbumResponse favoriteAlbum,
         CurrentTrackResponse currentTrack,
         List<TopAlbumItemResponse> topAlbums,
-        long totalReviews
+        long totalReviews,
+        long followersCount,
+        long followingCount,
+        boolean followedByMe,
+        boolean followsMe,
+        Integer tasteMatchPercentage,
+        int commonItemsCount
 ) {
 }
