@@ -74,14 +74,18 @@ import { ShareCardData, ShareCardModalComponent } from '../../../shared/componen
             [routerLink]="['/profile', list.username]"
             class="inline-flex items-center gap-2.5 group"
           >
-            <div class="w-8 h-8 rounded-full bg-[#12161a] border border-emerald-500 flex items-center justify-center text-white font-black text-xs uppercase shadow">
-              {{ list.username.substring(0, 2) }}
+            <div class="w-8 h-8 rounded-full bg-[#12161a] border border-emerald-500 overflow-hidden flex items-center justify-center text-white font-black text-xs uppercase shadow shrink-0">
+              @if (list.userAvatarUrl) {
+                <img [src]="list.userAvatarUrl" [alt]="list.username" class="w-full h-full object-cover" />
+              } @else {
+                {{ (list.userDisplayName || list.username).substring(0, 2) }}
+              }
             </div>
             <span class="text-sm font-semibold text-gray-300 group-hover:text-white transition-colors">
-              {{ list.username }}
+              {{ list.userDisplayName || list.username }}
             </span>
-            <span class="text-[9px] font-black uppercase tracking-wider bg-amber-500 text-black px-1.5 py-0.5 rounded">
-              PRO
+            <span class="text-[9px] font-black uppercase tracking-wider bg-emerald-500 text-black px-1.5 py-0.5 rounded">
+              PERFIL
             </span>
           </a>
 
@@ -162,9 +166,9 @@ import { ShareCardData, ShareCardModalComponent } from '../../../shared/componen
             </button>
           </div>
 
-          <!-- Olho Azul com % de Álbuns Avaliados pelo Usuário (idêntico à referência) -->
+          <!-- Olho Verde com % de Álbuns Avaliados pelo Usuário -->
           <div
-            class="inline-flex items-center gap-1.5 text-xs font-bold text-[#40bcf4]"
+            class="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400"
             title="Porcentagem de álbuns desta lista que você já avaliou"
           >
             <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
@@ -216,7 +220,7 @@ import { ShareCardData, ShareCardModalComponent } from '../../../shared/componen
                   <!-- Badge de Álbum já avaliado -->
                   @if (item.reviewedByMe) {
                     <span
-                      class="absolute bottom-1.5 right-1.5 w-4 h-4 rounded-full bg-[#40bcf4] text-black flex items-center justify-center text-[9px] font-black shadow"
+                      class="absolute bottom-1.5 right-1.5 w-4 h-4 rounded-full bg-emerald-500 text-black flex items-center justify-center text-[9px] font-black shadow"
                       title="Você já avaliou este álbum"
                     >
                       ✓
@@ -254,7 +258,7 @@ import { ShareCardData, ShareCardModalComponent } from '../../../shared/componen
         }
 
         <!-- Pílula Flutuante de Comentários (idêntica às imagens "1 comment" / "29 comments") -->
-        <div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-40">
+        <div class="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 z-30">
           <button
             type="button"
             (click)="scrollToComments()"
@@ -293,17 +297,29 @@ import { ShareCardData, ShareCardModalComponent } from '../../../shared/componen
             <div class="space-y-3">
               @for (c of list.comments; track c.id) {
                 <div class="bg-[#1b2228] border border-[#2a343d] rounded-lg p-3.5 flex items-start justify-between gap-3">
-                  <div>
-                    <div class="flex items-center gap-2">
-                      <a
-                        [routerLink]="['/profile', c.username]"
-                        class="text-xs font-bold text-emerald-400 hover:underline"
-                      >
-                        {{ c.username }}
-                      </a>
-                      <span class="text-[10px] text-gray-500">{{ formatDate(c.createdAt) }}</span>
+                  <div class="flex items-start gap-2.5">
+                    <a
+                      [routerLink]="['/profile', c.username]"
+                      class="w-7 h-7 rounded-full bg-[#12161a] border border-emerald-500/60 overflow-hidden flex items-center justify-center text-[10px] font-black text-white uppercase shrink-0 mt-0.5"
+                    >
+                      @if (c.userAvatarUrl) {
+                        <img [src]="c.userAvatarUrl" [alt]="c.username" class="w-full h-full object-cover" />
+                      } @else {
+                        {{ (c.userDisplayName || c.username).substring(0, 2) }}
+                      }
+                    </a>
+                    <div>
+                      <div class="flex items-center gap-2">
+                        <a
+                          [routerLink]="['/profile', c.username]"
+                          class="text-xs font-bold text-emerald-400 hover:underline"
+                        >
+                          {{ c.userDisplayName || c.username }}
+                        </a>
+                        <span class="text-[10px] text-gray-500">{{ formatDate(c.createdAt) }}</span>
+                      </div>
+                      <p class="text-xs text-gray-200 mt-1 leading-relaxed">{{ c.content }}</p>
                     </div>
-                    <p class="text-xs text-gray-200 mt-1 leading-relaxed">{{ c.content }}</p>
                   </div>
 
                   @if (canDeleteComment(c.username)) {

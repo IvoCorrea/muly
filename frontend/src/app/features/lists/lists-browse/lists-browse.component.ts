@@ -103,10 +103,14 @@ import { ListsService } from '../../../core/services/lists.service';
 
                 <!-- Autor -->
                 <div class="flex items-center gap-2 mb-1.5">
-                  <div class="w-5 h-5 rounded-full bg-[#12161a] border border-emerald-500/60 flex items-center justify-center text-[9px] font-black text-white uppercase">
-                    {{ list.username.substring(0, 2) }}
+                  <div class="w-5 h-5 rounded-full bg-[#12161a] border border-emerald-500/60 overflow-hidden flex items-center justify-center text-[9px] font-black text-white uppercase shrink-0">
+                    @if (list.userAvatarUrl) {
+                      <img [src]="list.userAvatarUrl" [alt]="list.username" class="w-full h-full object-cover" />
+                    } @else {
+                      {{ (list.userDisplayName || list.username).substring(0, 2) }}
+                    }
                   </div>
-                  <span class="text-xs font-semibold text-gray-400">{{ list.username }}</span>
+                  <span class="text-xs font-semibold text-gray-400">{{ list.userDisplayName || list.username }}</span>
                 </div>
 
                 <!-- Título e Descrição -->

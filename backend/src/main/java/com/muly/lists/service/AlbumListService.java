@@ -117,6 +117,8 @@ public class AlbumListService {
                 .map(c -> new AlbumListCommentResponse(
                         c.getId(),
                         c.getUser().getUsername(),
+                        c.getUser().getDisplayName(),
+                        c.getUser().getAvatarUrl(),
                         c.getContent(),
                         c.getCreatedAt()
                 ))
@@ -127,6 +129,8 @@ public class AlbumListService {
                 albumList.getTitle(),
                 albumList.getDescription(),
                 albumList.getUser().getUsername(),
+                albumList.getUser().getDisplayName(),
+                albumList.getUser().getAvatarUrl(),
                 albumList.getCreatedAt(),
                 albumList.getUpdatedAt(),
                 likesCount,
@@ -225,6 +229,8 @@ public class AlbumListService {
         return new AlbumListCommentResponse(
                 saved.getId(),
                 user.getUsername(),
+                user.getDisplayName(),
+                user.getAvatarUrl(),
                 saved.getContent(),
                 saved.getCreatedAt()
         );
@@ -291,6 +297,8 @@ public class AlbumListService {
                 albumList.getTitle(),
                 albumList.getDescription(),
                 albumList.getUser().getUsername(),
+                albumList.getUser().getDisplayName(),
+                albumList.getUser().getAvatarUrl(),
                 items.size(),
                 likesCount,
                 commentsCount,

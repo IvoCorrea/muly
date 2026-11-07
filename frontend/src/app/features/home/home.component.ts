@@ -14,12 +14,12 @@ import { AlbumCardComponent } from '../../shared/components/album-card/album-car
   template: `
     <div>
       <!-- Hero Section -->
-      <section class="py-16 sm:py-24 px-4 text-center border-b border-[#242c34] bg-gradient-to-b from-[#181e24] to-[#14181c]">
+      <section class="py-10 sm:py-20 px-4 text-center border-b border-[#242c34] bg-gradient-to-b from-[#181e24] to-[#14181c]">
         <div class="max-w-3xl mx-auto">
-          <span class="inline-block text-xs font-black uppercase tracking-widest text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full mb-4">
+          <span class="inline-block text-[10px] sm:text-xs font-black uppercase tracking-widest text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full mb-3 sm:mb-4">
             A rede social para quem ama música
           </span>
-          <h1 class="text-4xl sm:text-6xl font-black text-white tracking-tight leading-tight">
+          <h1 class="text-3xl sm:text-6xl font-black text-white tracking-tight leading-tight">
             Catalogue o que você ouve. Compartilhe o que você sente.
           </h1>
           <p class="text-sm sm:text-base text-gray-400 mt-4 leading-relaxed max-w-xl mx-auto">
@@ -146,6 +146,7 @@ export class HomeComponent implements OnInit {
 
   @HostListener('document:mousedown', ['$event'])
   onDocumentClick(event: MouseEvent): void {
+    if (!this.showDropdown && !this.searchingLive) return;
     if (this.searchContainer && !this.searchContainer.nativeElement.contains(event.target as Node)) {
       this.showDropdown = false;
       this.searchingLive = false;

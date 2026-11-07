@@ -1,6 +1,8 @@
 export interface ReviewResponse {
   id: string;
   username: string;
+  userDisplayName?: string | null;
+  userAvatarUrl?: string | null;
   albumExternalId: string;
   albumTitle: string;
   albumArtist: string;

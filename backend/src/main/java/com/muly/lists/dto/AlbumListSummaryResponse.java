@@ -9,6 +9,8 @@ public record AlbumListSummaryResponse(
         String title,
         String description,
         String username,
+        String userDisplayName,
+        String userAvatarUrl,
         int albumCount,
         long likesCount,
         long commentsCount,

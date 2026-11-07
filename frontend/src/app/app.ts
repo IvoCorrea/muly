@@ -8,7 +8,7 @@ import { NavbarComponent } from './shared/components/navbar/navbar.component';
   standalone: true,
   imports: [RouterOutlet, NavbarComponent, FooterComponent],
   template: `
-    <div class="min-h-screen flex flex-col bg-[#14181c] text-[#9ab] selection:bg-emerald-500 selection:text-black">
+    <div class="min-h-screen flex flex-col bg-[#14181c] text-[#9ab] selection:bg-emerald-500 selection:text-black pb-16 md:pb-0">
       <app-navbar />
       <main class="flex-1">
         <router-outlet />

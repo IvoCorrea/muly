@@ -24,19 +24,22 @@ public class ProfileService {
     private final CatalogService catalogService;
     private final ReviewService reviewService;
     private final SpotifyService spotifyService;
+    private final ImageKitService imageKitService;
 
     public ProfileService(
             TopAlbumRepository topAlbumRepository,
             UserService userService,
             CatalogService catalogService,
             ReviewService reviewService,
-            SpotifyService spotifyService
+            SpotifyService spotifyService,
+            ImageKitService imageKitService
     ) {
         this.topAlbumRepository = topAlbumRepository;
         this.userService = userService;
         this.catalogService = catalogService;
         this.reviewService = reviewService;
         this.spotifyService = spotifyService;
+        this.imageKitService = imageKitService;
     }
 
     @Transactional(readOnly = true)
@@ -77,12 +80,92 @@ public class ProfileService {
 
         return new UserProfileResponse(
                 user.getUsername(),
+                user.getDisplayName(),
+                user.getBio(),
+                user.getAvatarUrl(),
+                user.getSpotifyProfileUrl(),
+                user.getLastfmProfileUrl(),
                 user.getCreatedAt(),
                 favoriteAlbum,
                 currentTrack,
                 topAlbums,
                 totalReviews
         );
+    }
+
+    @Transactional
+    public UserProfileResponse updateProfileInfo(String username, UpdateProfileInfoRequest request) {
+        User user = userService.getByUsername(username);
+
+        if (request != null) {
+            user.setDisplayName(cleanNullable(request.displayName(), 60));
+            user.setBio(cleanNullable(request.bio(), 240));
+            user.setSpotifyProfileUrl(normalizeSocialUrl(request.spotifyProfileUrl(), "https://open.spotify.com/user/"));
+            user.setLastfmProfileUrl(normalizeSocialUrl(request.lastfmProfileUrl(), "https://www.last.fm/user/"));
+        }
+
+        userService.save(user);
+        return getProfile(username);
+    }
+
+    @Transactional
+    public UserProfileResponse uploadAvatar(String username, UploadAvatarRequest request) {
+        User user = userService.getByUsername(username);
+        if (request == null || request.base64Image() == null || request.base64Image().isBlank()) {
+            throw new IllegalArgumentException("Imagem inválida.");
+        }
+
+        String oldFileId = user.getAvatarFileId();
+        ImageKitService.UploadResult uploaded = imageKitService.uploadAvatar(user.getUsername(), request.base64Image());
+
+        user.setAvatarUrl(uploaded.url());
+        user.setAvatarFileId(uploaded.fileId());
+        userService.save(user);
+
+        if (oldFileId != null && !oldFileId.isBlank()) {
+            imageKitService.deleteFileQuietly(oldFileId);
+        }
+
+        return getProfile(username);
+    }
+
+    @Transactional
+    public UserProfileResponse deleteAvatar(String username) {
+        User user = userService.getByUsername(username);
+        String oldFileId = user.getAvatarFileId();
+
+        user.setAvatarUrl(null);
+        user.setAvatarFileId(null);
+        userService.save(user);
+
+        if (oldFileId != null && !oldFileId.isBlank()) {
+            imageKitService.deleteFileQuietly(oldFileId);
+        }
+
+        return getProfile(username);
+    }
+
+    private String cleanNullable(String value, int maxLen) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.length() > maxLen ? trimmed.substring(0, maxLen) : trimmed;
+    }
+
+    private String normalizeSocialUrl(String raw, String defaultPrefix) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        String trimmed = raw.trim();
+        if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+            return trimmed;
+        }
+        String handle = trimmed.startsWith("@") ? trimmed.substring(1).trim() : trimmed;
+        if (handle.isEmpty()) {
+            return null;
+        }
+        return defaultPrefix + handle;
     }
 
     @Transactional

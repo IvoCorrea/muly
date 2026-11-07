@@ -382,7 +382,6 @@ export class ShareCardModalComponent implements OnChanges {
           if (navigator.canShare && navigator.canShare({ files: [file] })) {
             await navigator.share({
               title: this.data.title,
-              text: `${this.data.title} — ${this.data.url}`,
               url: this.data.url,
               files: [file]
             });

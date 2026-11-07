@@ -370,9 +370,16 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                       <div class="flex flex-wrap items-center gap-2">
                         <a
                           [routerLink]="['/profile', rev.username]"
-                          class="font-bold text-sm text-gray-100 hover:text-emerald-400 transition-colors"
+                          class="inline-flex items-center gap-2 font-bold text-sm text-gray-100 hover:text-emerald-400 transition-colors"
                         >
-                          {{ rev.username }}
+                          <span class="w-6 h-6 rounded-full bg-[#12161a] border border-emerald-500/60 overflow-hidden flex items-center justify-center text-[10px] font-black text-white uppercase shrink-0">
+                            @if (rev.userAvatarUrl) {
+                              <img [src]="rev.userAvatarUrl" [alt]="rev.username" class="w-full h-full object-cover" />
+                            } @else {
+                              {{ (rev.userDisplayName || rev.username).substring(0, 2) }}
+                            }
+                          </span>
+                          <span>{{ rev.userDisplayName || rev.username }}</span>
                         </a>
                         @if (rev.trackNumber !== null) {
                           <span class="text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full">

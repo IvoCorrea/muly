@@ -229,6 +229,7 @@ export class ListFormComponent implements OnInit {
 
   @HostListener('document:mousedown', ['$event'])
   onDocumentClick(event: MouseEvent): void {
+    if (!this.showDropdown && !this.searching) return;
     if (this.albumSearchContainer && !this.albumSearchContainer.nativeElement.contains(event.target as Node)) {
       this.showDropdown = false;
       this.searching = false;

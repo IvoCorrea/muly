@@ -1,9 +1,6 @@
 package com.muly.profile.controller;
 
-import com.muly.profile.dto.SetCurrentTrackRequest;
-import com.muly.profile.dto.SetFavoriteAlbumRequest;
-import com.muly.profile.dto.UpdateTopAlbumsRequest;
-import com.muly.profile.dto.UserProfileResponse;
+import com.muly.profile.dto.*;
 import com.muly.profile.service.ProfileService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +21,30 @@ public class ProfileController {
     @GetMapping("/me")
     public ResponseEntity<UserProfileResponse> getMyProfile(Principal principal) {
         UserProfileResponse response = profileService.getProfile(principal.getName());
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/me/info")
+    public ResponseEntity<UserProfileResponse> updateProfileInfo(
+            @Valid @RequestBody UpdateProfileInfoRequest request,
+            Principal principal
+    ) {
+        UserProfileResponse response = profileService.updateProfileInfo(principal.getName(), request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/me/avatar")
+    public ResponseEntity<UserProfileResponse> uploadAvatar(
+            @RequestBody UploadAvatarRequest request,
+            Principal principal
+    ) {
+        UserProfileResponse response = profileService.uploadAvatar(principal.getName(), request);
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/me/avatar")
+    public ResponseEntity<UserProfileResponse> deleteAvatar(Principal principal) {
+        UserProfileResponse response = profileService.deleteAvatar(principal.getName());
         return ResponseEntity.ok(response);
     }
 

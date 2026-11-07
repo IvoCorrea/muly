@@ -32,6 +32,24 @@ public class User implements UserDetails {
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
+    @Column(name = "display_name", length = 60)
+    private String displayName;
+
+    @Column(name = "bio", length = 240)
+    private String bio;
+
+    @Column(name = "avatar_url", length = 1024)
+    private String avatarUrl;
+
+    @Column(name = "avatar_file_id", length = 128)
+    private String avatarFileId;
+
+    @Column(name = "spotify_profile_url", length = 512)
+    private String spotifyProfileUrl;
+
+    @Column(name = "lastfm_profile_url", length = 512)
+    private String lastfmProfileUrl;
+
     @Column(name = "favorite_album_id")
     private UUID favoriteAlbumId;
 

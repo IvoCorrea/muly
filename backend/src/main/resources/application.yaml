@@ -40,3 +40,8 @@ cors:
 spotify:
   client-id: ${SPOTIFY_CLIENT_ID:}
   client-secret: ${SPOTIFY_CLIENT_SECRET:}
+
+imagekit:
+  private-key: ${IMAGEKIT_PRIVATE_KEY:}
+  public-key: ${IMAGEKIT_PUBLIC_KEY:}
+  url-endpoint: ${IMAGEKIT_URL_ENDPOINT:}

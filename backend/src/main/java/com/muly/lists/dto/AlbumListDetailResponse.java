@@ -9,6 +9,8 @@ public record AlbumListDetailResponse(
         String title,
         String description,
         String username,
+        String userDisplayName,
+        String userAvatarUrl,
         Instant createdAt,
         Instant updatedAt,
         long likesCount,

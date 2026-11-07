@@ -5,6 +5,8 @@ export interface AlbumListSummaryResponse {
   title: string;
   description: string | null;
   username: string;
+  userDisplayName?: string | null;
+  userAvatarUrl?: string | null;
   albumCount: number;
   likesCount: number;
   commentsCount: number;
@@ -21,6 +23,8 @@ export interface AlbumListItemResponse {
 export interface AlbumListCommentResponse {
   id: string;
   username: string;
+  userDisplayName?: string | null;
+  userAvatarUrl?: string | null;
   content: string;
   createdAt: string;
 }
@@ -30,6 +34,8 @@ export interface AlbumListDetailResponse {
   title: string;
   description: string | null;
   username: string;
+  userDisplayName?: string | null;
+  userAvatarUrl?: string | null;
   createdAt: string;
   updatedAt: string | null;
   likesCount: number;

@@ -207,6 +207,8 @@ public class ReviewService {
         return new ReviewResponse(
                 review.getId(),
                 review.getUser().getUsername(),
+                review.getUser().getDisplayName(),
+                review.getUser().getAvatarUrl(),
                 review.getAlbum().getExternalId(),
                 review.getAlbum().getTitle(),
                 review.getAlbum().getArtist(),
@@ -225,6 +227,8 @@ public class ReviewService {
         return new ReviewResponse(
                 trackReview.getId(),
                 trackReview.getUser().getUsername(),
+                trackReview.getUser().getDisplayName(),
+                trackReview.getUser().getAvatarUrl(),
                 trackReview.getAlbum().getExternalId(),
                 trackReview.getAlbum().getTitle(),
                 trackReview.getAlbum().getArtist(),

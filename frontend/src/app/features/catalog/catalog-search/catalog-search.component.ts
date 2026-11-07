@@ -137,6 +137,7 @@ export class CatalogSearchComponent implements OnInit {
 
   @HostListener('document:mousedown', ['$event'])
   onDocumentClick(event: MouseEvent): void {
+    if (!this.showDropdown && !this.searchingLive) return;
     if (this.searchContainer && !this.searchContainer.nativeElement.contains(event.target as Node)) {
       this.showDropdown = false;
       this.searchingLive = false;

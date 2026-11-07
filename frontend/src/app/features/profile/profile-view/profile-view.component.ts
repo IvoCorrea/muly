@@ -46,26 +46,70 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
 
           <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 relative z-10 pr-6 sm:pr-8">
             
-            <div class="flex items-center gap-5">
-              <div class="w-20 h-20 rounded-full bg-[#12161a] border-2 border-emerald-500 flex items-center justify-center text-white font-black text-2xl uppercase shadow-md">
-                {{ profile.username.substring(0, 2) }}
+            <div class="flex items-start sm:items-center gap-5">
+              <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-[#12161a] border-2 border-emerald-500 overflow-hidden flex items-center justify-center text-white font-black text-2xl uppercase shadow-md shrink-0">
+                @if (profile.avatarUrl) {
+                  <img [src]="profile.avatarUrl" [alt]="profile.username" class="w-full h-full object-cover" />
+                } @else {
+                  {{ (profile.displayName || profile.username).substring(0, 2) }}
+                }
               </div>
               <div>
-                <h1 class="text-2xl sm:text-3xl font-black text-white tracking-wide">
-                  {{ profile.username }}
-                </h1>
-                <p class="text-xs text-gray-400 mt-1">
+                <div class="flex flex-wrap items-baseline gap-2">
+                  <h1 class="text-2xl sm:text-3xl font-black text-white tracking-wide">
+                    {{ profile.displayName || profile.username }}
+                  </h1>
+                  @if (profile.displayName) {
+                    <span class="text-xs font-semibold text-emerald-400">&#64;{{ profile.username }}</span>
+                  }
+                </div>
+
+                @if (profile.bio) {
+                  <p class="text-xs sm:text-sm text-gray-300 mt-1.5 max-w-xl leading-relaxed whitespace-pre-wrap">
+                    {{ profile.bio }}
+                  </p>
+                }
+
+                <p class="text-xs text-gray-400 mt-1.5">
                   Membro desde {{ formatDate(profile.memberSince) }}
                 </p>
-                <div class="mt-2 flex flex-wrap items-center gap-2">
-                  <div class="inline-flex items-center gap-2 bg-[#12161a] px-3 py-1 rounded-full text-xs font-semibold text-emerald-400 border border-[#242c34]">
+
+                <div class="mt-2.5 flex flex-wrap items-center gap-2">
+                  <div class="inline-flex items-center gap-1.5 bg-[#12161a] px-3 py-1 rounded-full text-xs font-semibold text-emerald-400 border border-[#242c34]">
                     <span>{{ profile.totalReviews }}</span>
                     <span class="text-gray-400 font-normal">{{ profile.totalReviews === 1 ? 'avaliação publicada' : 'avaliações publicadas' }}</span>
                   </div>
-                  <div class="inline-flex items-center gap-2 bg-[#12161a] px-3 py-1 rounded-full text-xs font-semibold text-emerald-400 border border-[#242c34]">
+                  <div class="inline-flex items-center gap-1.5 bg-[#12161a] px-3 py-1 rounded-full text-xs font-semibold text-emerald-400 border border-[#242c34]">
                     <span>{{ userLists.length }}</span>
                     <span class="text-gray-400 font-normal">{{ userLists.length === 1 ? 'lista' : 'listas' }}</span>
                   </div>
+
+                  @if (profile.spotifyProfileUrl) {
+                    <a
+                      [href]="profile.spotifyProfileUrl"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="inline-flex items-center gap-1.5 bg-[#1DB954]/15 hover:bg-[#1DB954] text-[#1DB954] hover:text-black border border-[#1DB954]/30 px-3 py-1 rounded-full text-xs font-bold transition-colors"
+                      title="Perfil no Spotify"
+                    >
+                      <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
+                      </svg>
+                      <span>Spotify</span>
+                    </a>
+                  }
+
+                  @if (profile.lastfmProfileUrl) {
+                    <a
+                      [href]="profile.lastfmProfileUrl"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="inline-flex items-center gap-1.5 bg-red-500/15 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/30 px-3 py-1 rounded-full text-xs font-bold transition-colors"
+                      title="Perfil no Last.fm"
+                    >
+                      <span class="font-black text-[10px] leading-none">last.fm</span>
+                    </a>
+                  }
                 </div>
               </div>
             </div>
@@ -549,16 +593,18 @@ export class ProfileViewComponent implements OnInit, OnDestroy {
     this.shareCardData = {
       type: 'profile',
       url,
-      title: `@${this.profile.username}`,
+      title: this.profile.displayName ? `${this.profile.displayName} (@${this.profile.username})` : `@${this.profile.username}`,
       subtitle: this.profile.favoriteAlbum
         ? `★ ${this.profile.favoriteAlbum.title} — ${this.profile.favoriteAlbum.artist}`
         : 'Perfil Musical no Muly',
       username: this.profile.username,
-      coverUrl: this.profile.favoriteAlbum?.coverUrl || null,
+      coverUrl: this.profile.favoriteAlbum?.coverUrl || this.profile.avatarUrl || null,
       gridCovers: topCovers.length >= 2 ? topCovers : undefined,
-      reviewText: this.profile.currentTrack
-        ? `Ouvindo agora: ${this.profile.currentTrack.title} (${this.profile.currentTrack.artist || ''})`
-        : null,
+      reviewText: this.profile.bio
+        ? this.profile.bio
+        : (this.profile.currentTrack
+          ? `Ouvindo agora: ${this.profile.currentTrack.title} (${this.profile.currentTrack.artist || ''})`
+          : null),
       statsText: `${this.profile.totalReviews} ${this.profile.totalReviews === 1 ? 'avaliação publicada' : 'avaliações publicadas'} • ${this.userLists.length} ${this.userLists.length === 1 ? 'lista' : 'listas'}`
     };
     this.shareModalOpen = true;

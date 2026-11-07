@@ -5,7 +5,9 @@ import { environment } from '../../../environments/environment';
 import {
   SetCurrentTrackRequest,
   SetFavoriteAlbumRequest,
+  UpdateProfileInfoRequest,
   UpdateTopAlbumsRequest,
+  UploadAvatarRequest,
   UserProfileResponse
 } from '../models/profile.models';
 
@@ -21,6 +23,19 @@ export class ProfileService {
 
   public getMyProfile(): Observable<UserProfileResponse> {
     return this.http.get<UserProfileResponse>(`${environment.apiUrl}/profile/me`);
+  }
+
+  public updateProfileInfo(request: UpdateProfileInfoRequest): Observable<UserProfileResponse> {
+    return this.http.put<UserProfileResponse>(`${environment.apiUrl}/profile/me/info`, request);
+  }
+
+  public uploadAvatar(base64Image: string): Observable<UserProfileResponse> {
+    const payload: UploadAvatarRequest = { base64Image };
+    return this.http.post<UserProfileResponse>(`${environment.apiUrl}/profile/me/avatar`, payload);
+  }
+
+  public deleteAvatar(): Observable<UserProfileResponse> {
+    return this.http.delete<UserProfileResponse>(`${environment.apiUrl}/profile/me/avatar`);
   }
 
   public setFavoriteAlbum(spotifyId: string | null): Observable<UserProfileResponse> {
