@@ -25,7 +25,7 @@ import { Component } from '@angular/core';
           </span>
           <span class="hidden sm:inline text-gray-600">•</span>
           <p class="text-[11px] text-gray-600">
-            Dados e metadados via Spotify Web API. Multi-user v1.5.1.
+            Dados e metadados via Spotify Web API. Multi-user v1.5.2.
           </p>
         </div>
       </div>

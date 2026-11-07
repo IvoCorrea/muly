@@ -212,11 +212,11 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
 
             <!-- Card: Álbum Favorito de Todos os Tempos -->
             @if (profile.favoriteAlbum) {
-              <div class="flex flex-col">
+              <div class="flex flex-col min-w-0">
                 <h2 class="text-xs font-black uppercase tracking-widest text-emerald-400 mb-3 flex items-center gap-2">
                   <span>★</span> Álbum Favorito de Todos os Tempos
                 </h2>
-                <div class="flex-1 bg-gradient-to-r from-[#1c2228] to-[#14181c] border border-emerald-500/30 rounded-xl p-6 flex flex-col sm:flex-row items-center gap-6 shadow-xl">
+                <div class="flex-1 min-w-0 overflow-hidden bg-gradient-to-r from-[#1c2228] to-[#14181c] border border-emerald-500/30 rounded-xl p-6 flex flex-col sm:flex-row items-center gap-6 shadow-xl">
                   <div class="w-32 h-32 rounded-lg overflow-hidden shadow-2xl shrink-0 border border-[#2a343d]">
                     <img
                       [src]="profile.favoriteAlbum.coverUrl"
@@ -224,14 +224,14 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                       class="w-full h-full object-cover"
                     />
                   </div>
-                  <div class="text-center sm:text-left">
+                  <div class="flex-1 min-w-0 text-center sm:text-left">
                     <span class="text-[10px] uppercase font-bold text-gray-500 bg-[#12161a] px-2 py-0.5 rounded">
                       {{ profile.favoriteAlbum.releaseYear }}
                     </span>
-                    <h3 class="text-xl font-black text-white mt-1">
+                    <h3 class="text-lg sm:text-xl font-black text-white mt-1 leading-snug line-clamp-2 break-words" [title]="profile.favoriteAlbum.title">
                       {{ profile.favoriteAlbum.title }}
                     </h3>
-                    <p class="text-sm text-emerald-400 font-semibold mt-0.5">
+                    <p class="text-sm text-emerald-400 font-semibold mt-0.5 truncate">
                       {{ profile.favoriteAlbum.artist }}
                     </p>
                     <div class="mt-4 flex flex-wrap items-center justify-center sm:justify-start gap-2">
@@ -261,11 +261,11 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
 
             <!-- Card: Música do Momento (Com Player e Link do Spotify) -->
             @if (profile.currentTrack) {
-              <div class="flex flex-col">
+              <div class="flex flex-col min-w-0">
                 <h2 class="text-xs font-black uppercase tracking-widest text-emerald-400 mb-3 flex items-center gap-2">
                   <span>🎧</span> Música que mais está gostando atualmente
                 </h2>
-                <div class="flex-1 bg-gradient-to-r from-[#1c2228] to-[#14181c] border border-emerald-500/30 rounded-xl p-6 flex flex-col sm:flex-row items-center gap-6 shadow-xl">
+                <div class="flex-1 min-w-0 overflow-hidden bg-gradient-to-r from-[#1c2228] to-[#14181c] border border-emerald-500/30 rounded-xl p-6 flex flex-col sm:flex-row items-center gap-6 shadow-xl">
                   <div class="w-32 h-32 rounded-lg overflow-hidden shadow-2xl shrink-0 border border-[#2a343d] bg-[#12161a] relative group">
                     @if (profile.currentTrack.coverUrl) {
                       <img
@@ -288,7 +288,7 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                     </button>
                   </div>
 
-                  <div class="flex-1 w-full text-center sm:text-left">
+                  <div class="flex-1 min-w-0 w-full text-center sm:text-left">
                     <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2">
                       <div class="inline-flex items-center gap-1.5 bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider text-emerald-400">
                         <span>{{ isPlaying ? 'Tocando Agora' : 'Na vitrola de ' + profile.username }}</span>
@@ -308,7 +308,10 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                       </a>
                     </div>
 
-                    <h3 class="text-xl font-black text-white mt-1.5 truncate">
+                    <h3
+                      class="text-lg sm:text-xl font-black text-white mt-1.5 leading-snug line-clamp-2 break-words"
+                      [title]="profile.currentTrack.title"
+                    >
                       {{ profile.currentTrack.title }}
                     </h3>
                     <p class="text-sm text-emerald-400 font-semibold mt-0.5 truncate">
