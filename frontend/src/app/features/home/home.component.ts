@@ -7,8 +7,52 @@ import { ReviewResponse } from '../../core/models/reviews.models';
 import { AuthService } from '../../core/services/auth.service';
 import { CatalogService } from '../../core/services/catalog.service';
 import { ReviewsService } from '../../core/services/reviews.service';
+import { ServerStatusService } from '../../core/services/server-status.service';
 import { AlbumCardComponent } from '../../shared/components/album-card/album-card.component';
 import { StarRatingComponent } from '../../shared/components/star-rating/star-rating.component';
+
+const FALLBACK_FEATURED_ALBUMS: AlbumResponse[] = [
+  {
+    id: 'fallback-1',
+    externalId: '6dVIqQ8qmQ5GBnJ9shOYGE',
+    title: 'OK Computer',
+    artist: 'Radiohead',
+    releaseYear: 1997,
+    coverUrl: 'https://i.scdn.co/image/ab67616d0000b273c8b444df094279e70d0ed856'
+  },
+  {
+    id: 'fallback-2',
+    externalId: '5vkqYmiPBYLaalcmjujWxK',
+    title: 'In Rainbows',
+    artist: 'Radiohead',
+    releaseYear: 2007,
+    coverUrl: 'https://i.scdn.co/image/ab67616d0000b273de3c04b5fc750b68899b20a9'
+  },
+  {
+    id: 'fallback-3',
+    externalId: '6GjwtEZcfenmOf6l18N7T7',
+    title: 'Kid A',
+    artist: 'Radiohead',
+    releaseYear: 2000,
+    coverUrl: 'https://i.scdn.co/image/ab67616d0000b2736c7112082b63beefffe40151'
+  },
+  {
+    id: 'fallback-4',
+    externalId: '35UJLpClj5EDrhpNIi4DFg',
+    title: 'The Bends',
+    artist: 'Radiohead',
+    releaseYear: 1995,
+    coverUrl: 'https://i.scdn.co/image/ab67616d0000b2739293c743fa542094336c5e12'
+  },
+  {
+    id: 'fallback-5',
+    externalId: '6vuykQgDLUCiZ7YggIpLM9',
+    title: 'A Moon Shaped Pool',
+    artist: 'Radiohead',
+    releaseYear: 2016,
+    coverUrl: 'https://i.scdn.co/image/ab67616d0000b27345643f5cf119cbc9d2811c22'
+  }
+];
 
 @Component({
   selector: 'app-home',
@@ -146,6 +190,24 @@ import { StarRatingComponent } from '../../shared/components/star-rating/star-ra
         </div>
 
         @if (loadingFeed) {
+          @if (serverStatus.isWakingUp()) {
+            <div class="mb-4 bg-emerald-950/40 border border-emerald-500/30 rounded-xl p-4 flex items-center justify-between gap-3">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                  <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                  </svg>
+                </div>
+                <div>
+                  <p class="text-xs font-bold text-emerald-300">Sincronizando feed da comunidade...</p>
+                  <p class="text-[11px] text-gray-400">
+                    O servidor estava em repouso e está iniciando. As resenhas aparecerão automaticamente em alguns segundos!
+                  </p>
+                </div>
+              </div>
+            </div>
+          }
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             @for (s of [1, 2, 3, 4]; track s) {
               <div class="bg-[#1b2228] border border-[#2a343d] rounded-xl p-5 flex gap-4">
@@ -281,6 +343,18 @@ import { StarRatingComponent } from '../../shared/components/star-rating/star-ra
               >
                 Explorar Comunidade
               </button>
+            } @else if (feedError) {
+              <p class="text-sm font-bold text-gray-200">O servidor ainda está terminando de iniciar</p>
+              <p class="text-xs text-gray-400 mt-1 max-w-md mx-auto">
+                Após períodos de inatividade, o servidor gratuito leva alguns segundos extras para acordar.
+              </p>
+              <button
+                type="button"
+                (click)="loadFeed()"
+                class="cursor-pointer mt-4 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs uppercase tracking-wider px-4 py-2 rounded-lg transition-colors"
+              >
+                Tentar novamente
+              </button>
             } @else {
               <p class="text-xs text-gray-400">
                 Ainda não há avaliações publicadas. Busque um álbum acima e seja o primeiro a avaliar!
@@ -324,6 +398,7 @@ import { StarRatingComponent } from '../../shared/components/star-rating/star-ra
 })
 export class HomeComponent implements OnInit {
   authService = inject(AuthService);
+  serverStatus = inject(ServerStatusService);
   private catalogService = inject(CatalogService);
   private reviewsService = inject(ReviewsService);
   private router = inject(Router);
@@ -340,6 +415,7 @@ export class HomeComponent implements OnInit {
   feedTab: 'trending' | 'following' | 'recent' = 'trending';
   feedReviews: ReviewResponse[] = [];
   loadingFeed = true;
+  feedError = false;
   openCommentsMap: Record<string, boolean> = {};
   commentInputs: Record<string, string> = {};
 
@@ -355,9 +431,20 @@ export class HomeComponent implements OnInit {
   ngOnInit(): void {
     this.loadFeed();
 
+    const cachedAlbums = this.serverStatus.getCached<AlbumResponse[]>('http_/catalog/search?q=Radiohead');
+    if (cachedAlbums && cachedAlbums.length > 0) {
+      this.featuredAlbums = cachedAlbums.slice(0, 10);
+      this.loading = false;
+    } else {
+      this.featuredAlbums = FALLBACK_FEATURED_ALBUMS;
+      this.loading = false;
+    }
+
     this.catalogService.search('Radiohead').subscribe({
       next: (albums) => {
-        this.featuredAlbums = albums.slice(0, 10);
+        if (albums && albums.length > 0) {
+          this.featuredAlbums = albums.slice(0, 10);
+        }
         this.loading = false;
       },
       error: () => {
@@ -372,14 +459,25 @@ export class HomeComponent implements OnInit {
   }
 
   loadFeed(): void {
-    this.loadingFeed = true;
+    this.feedError = false;
+    const cachedFeed = this.serverStatus.getCached<ReviewResponse[]>(`http_/reviews/feed?tab=${this.feedTab}`);
+    if (cachedFeed && cachedFeed.length > 0) {
+      this.feedReviews = cachedFeed;
+      this.loadingFeed = false;
+    } else {
+      this.loadingFeed = true;
+    }
+
     this.reviewsService.getFeed(this.feedTab).subscribe({
       next: (reviews) => {
         this.feedReviews = reviews || [];
         this.loadingFeed = false;
+        this.feedError = false;
       },
       error: () => {
-        this.feedReviews = [];
+        if (this.feedReviews.length === 0) {
+          this.feedError = true;
+        }
         this.loadingFeed = false;
       }
     });

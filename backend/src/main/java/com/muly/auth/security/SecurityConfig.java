@@ -36,6 +36,8 @@ public class SecurityConfig {
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
                 )
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.GET, "/", "/health").permitAll()
+                        .requestMatchers(HttpMethod.HEAD, "/", "/health").permitAll()
                         .requestMatchers(HttpMethod.POST, "/auth/**").permitAll()
                         .requestMatchers("/profile/me", "/profile/me/**").authenticated()
                         .requestMatchers(HttpMethod.GET, "/profile/{username}", "/profile/{username}/followers", "/profile/{username}/following").permitAll()

@@ -19,7 +19,13 @@ function formatStars(rating) {
 
 async function fetchJson(url) {
   try {
-    const res = await fetch(url, { headers: { Accept: 'application/json' } });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6500);
+    const res = await fetch(url, {
+      headers: { Accept: 'application/json' },
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
     if (!res.ok) return null;
     return await res.json();
   } catch {

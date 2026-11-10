@@ -1,0 +1,22 @@
+name: Keep Backend Awake
+
+on:
+  schedule:
+    # Executa a cada 10 minutos para evitar que o container entre em hibernação (inatividade de 15 min)
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Ping Muly API Health Endpoint
+        run: |
+          echo "Acordando / mantendo ativa a API do Muly..."
+          curl --fail --silent --show-error --location \
+            --retry 3 --retry-delay 5 --retry-all-errors \
+            --max-time 60 \
+            "https://api.muly.xyz/health"
+          echo ""
+          echo "API online!"

@@ -1,6 +1,8 @@
 spring:
   application:
     name: muly
+  main:
+    lazy-initialization: ${LAZY_INIT:true}
   config:
     import:
       - optional:file:.env[.properties]
@@ -19,12 +21,13 @@ spring:
       connection-timeout: 30000
 
   jpa:
+    open-in-view: false
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: ${SHOW_SQL:false}
     properties:
       hibernate:
-        format_sql: true
+        format_sql: false
     database-platform: org.hibernate.dialect.PostgreSQLDialect
 
 server:

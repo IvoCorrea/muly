@@ -30,6 +30,14 @@
 
   <link rel="icon" type="image/x-icon" href="favicon.ico">
   <link rel="icon" type="image/png" href="logo-circle.png">
+  <link rel="preconnect" href="https://api.muly.xyz" crossorigin>
+  <script>
+    // Dispara um ping imediato assim que o HTML abre (antes mesmo do bundle Angular carregar)
+    // para acordar o container do backend o mais cedo possível em caso de cold start.
+    if (window.location.hostname !== 'localhost') {
+      fetch('https://api.muly.xyz/health', { mode: 'cors', cache: 'no-store' }).catch(function () {});
+    }
+  </script>
 </head>
 <body>
   <!-- Developed by Ivo Albuquerque - https://github.com/IvoCorrea -->
