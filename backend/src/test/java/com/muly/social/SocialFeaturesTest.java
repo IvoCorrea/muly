@@ -3,12 +3,17 @@ package com.muly.social;
 import com.muly.auth.model.User;
 import com.muly.auth.repository.UserRepository;
 import com.muly.auth.service.UserService;
+import com.muly.catalog.dto.AlbumResponse;
+import com.muly.catalog.dto.ArtistDetailResponse;
+import com.muly.catalog.dto.RankedAlbumResponse;
 import com.muly.catalog.model.Album;
 import com.muly.catalog.repository.AlbumRepository;
 import com.muly.catalog.service.CatalogService;
 import com.muly.catalog.service.SpotifyService;
 import com.muly.profile.dto.UserProfileResponse;
+import com.muly.profile.model.ListenLaterItem;
 import com.muly.profile.model.UserFollow;
+import com.muly.profile.repository.ListenLaterRepository;
 import com.muly.profile.repository.TopAlbumRepository;
 import com.muly.profile.repository.UserFollowRepository;
 import com.muly.profile.service.ImageKitService;
@@ -110,7 +115,12 @@ class SocialFeaturesTest {
         });
         UserService userService = new UserService(userRepository);
 
-        AlbumRepository albumRepository = stubInterface(AlbumRepository.class, (proxy, method, args) -> Optional.of(album1));
+        AlbumRepository albumRepository = stubInterface(AlbumRepository.class, (proxy, method, args) -> {
+            if ("findByArtistContainingIgnoreCaseOrderByReleaseYearDesc".equals(method.getName())) {
+                return List.of(album1);
+            }
+            return Optional.of(album1);
+        });
         SpotifyService spotifyService = new SpotifyService("", "");
         CatalogService catalogService = new CatalogService(albumRepository, spotifyService);
 
@@ -135,6 +145,7 @@ class SocialFeaturesTest {
         ReviewRepository reviewRepository = stubInterface(ReviewRepository.class, (proxy, method, args) -> {
             String m = method.getName();
             if ("findById".equals(m)) return Optional.of(reviewIvo);
+            if ("findAll".equals(m)) return List.of(reviewIvo, reviewAna);
             if ("save".equals(m)) {
                 Review r = (Review) args[0];
                 if (r.getId() == null) r.setId(UUID.randomUUID());
@@ -197,11 +208,36 @@ class SocialFeaturesTest {
         );
 
         TopAlbumRepository topAlbumRepository = stubInterface(TopAlbumRepository.class, (proxy, method, args) -> List.of());
+        List<ListenLaterItem> listenLaterStore = new ArrayList<>();
+        ListenLaterRepository listenLaterRepository = stubInterface(ListenLaterRepository.class, (proxy, method, args) -> {
+            String m = method.getName();
+            if ("findByUserUsernameOrderByCreatedAtDesc".equals(m)) {
+                return new ArrayList<>(listenLaterStore);
+            }
+            if ("findByUserUsernameAndAlbumExternalId".equals(m)) {
+                return listenLaterStore.stream().findFirst();
+            }
+            if ("existsByUserUsernameAndAlbumExternalId".equals(m)) {
+                return !listenLaterStore.isEmpty();
+            }
+            if ("save".equals(m)) {
+                ListenLaterItem item = (ListenLaterItem) args[0];
+                item.setId(UUID.randomUUID());
+                listenLaterStore.add(item);
+                return item;
+            }
+            if ("delete".equals(m)) {
+                listenLaterStore.remove((ListenLaterItem) args[0]);
+                return null;
+            }
+            return 0L;
+        });
         ImageKitService imageKitService = new ImageKitService("", "", "");
 
         profileService = new ProfileService(
                 topAlbumRepository,
                 userFollowRepository,
+                listenLaterRepository,
                 reviewRepository,
                 trackReviewRepository,
                 userService,
@@ -243,5 +279,38 @@ class SocialFeaturesTest {
         assertTrue(profile.tasteMatchPercentage() >= 85);
         assertTrue(profile.commonItemsCount() >= 1);
         assertTrue(profile.followedByMe());
+        assertNotNull(profile.badges());
+        assertTrue(profile.badges().stream().anyMatch(b -> "pioneer".equals(b.id())));
+        assertTrue(profile.badges().stream().anyMatch(b -> "first_review".equals(b.id())));
+    }
+
+    @Test
+    void shouldToggleListenLaterAndListAlbums() {
+        boolean saved = profileService.toggleListenLater("ivo", "spotify-1");
+        assertTrue(saved);
+        assertTrue(profileService.isSavedInListenLater("ivo", "spotify-1"));
+
+        List<AlbumResponse> items = profileService.getListenLater("ivo");
+        assertEquals(1, items.size());
+        assertEquals("In Rainbows", items.get(0).title());
+
+        boolean removed = profileService.toggleListenLater("ivo", "spotify-1");
+        assertFalse(removed);
+        assertTrue(profileService.getListenLater("ivo").isEmpty());
+    }
+
+    @Test
+    void shouldComputeCommunityRankingAndArtistDetail() {
+        List<RankedAlbumResponse> ranking = reviewService.getTopRankedAlbums(10);
+        assertEquals(1, ranking.size());
+        assertEquals("In Rainbows", ranking.get(0).title());
+        assertEquals(4.3, ranking.get(0).averageRating());
+        assertEquals(2L, ranking.get(0).totalReviews());
+
+        ArtistDetailResponse artist = reviewService.getArtistDetail("Radiohead");
+        assertEquals("Radiohead", artist.artistName());
+        assertEquals(1, artist.totalAlbums());
+        assertEquals(2L, artist.totalReviews());
+        assertEquals(4.3, artist.averageRating());
     }
 }

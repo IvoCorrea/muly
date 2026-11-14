@@ -31,3 +31,22 @@ export interface TrackSearchResponse {
   previewUrl: string | null;
   spotifyUrl?: string | null;
 }
+
+export interface RankedAlbumResponse {
+  id: string | null;
+  externalId: string;
+  title: string;
+  artist: string;
+  releaseYear: number | null;
+  coverUrl: string | null;
+  averageRating: number | null;
+  totalReviews: number;
+}
+
+export interface ArtistDetailResponse {
+  artistName: string;
+  totalAlbums: number;
+  totalReviews: number;
+  averageRating: number | null;
+  albums: RankedAlbumResponse[];
+}

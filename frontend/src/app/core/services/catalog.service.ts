@@ -2,7 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { catchError, map, Observable, of } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { AlbumDetailResponse, AlbumResponse, TrackSearchResponse } from '../models/catalog.models';
+import { AlbumDetailResponse, AlbumResponse, ArtistDetailResponse, RankedAlbumResponse, TrackSearchResponse } from '../models/catalog.models';
 
 @Injectable({
   providedIn: 'root'
@@ -17,6 +17,15 @@ export class CatalogService {
 
   public getAlbum(spotifyId: string): Observable<AlbumDetailResponse> {
     return this.http.get<AlbumDetailResponse>(`${environment.apiUrl}/catalog/albums/${spotifyId}`);
+  }
+
+  public getRanking(limit = 50): Observable<RankedAlbumResponse[]> {
+    const params = new HttpParams().set('limit', String(limit));
+    return this.http.get<RankedAlbumResponse[]>(`${environment.apiUrl}/catalog/ranking`, { params });
+  }
+
+  public getArtistDetail(artistName: string): Observable<ArtistDetailResponse> {
+    return this.http.get<ArtistDetailResponse>(`${environment.apiUrl}/catalog/artists/${encodeURIComponent(artistName)}`);
   }
 
   public searchTracks(query: string): Observable<TrackSearchResponse[]> {

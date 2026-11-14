@@ -7,6 +7,7 @@ import { AlbumDetailResponse, AlbumTrackResponse } from '../../../core/models/ca
 import { AlbumReviewsSummaryResponse, ReviewResponse } from '../../../core/models/reviews.models';
 import { AuthService } from '../../../core/services/auth.service';
 import { CatalogService } from '../../../core/services/catalog.service';
+import { ProfileService } from '../../../core/services/profile.service';
 import { ReviewsService } from '../../../core/services/reviews.service';
 import { ShareCardData, ShareCardModalComponent } from '../../../shared/components/share-card-modal/share-card-modal.component';
 import { StarRatingComponent } from '../../../shared/components/star-rating/star-rating.component';
@@ -63,13 +64,32 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                   </svg>
                   <span>Ouvir no Spotify</span>
                 </a>
+                <button
+                  type="button"
+                  (click)="toggleListenLater()"
+                  [disabled]="togglingListenLater"
+                  class="cursor-pointer disabled:opacity-50 inline-flex items-center gap-1.5 font-bold text-[11px] uppercase tracking-wider px-3 py-1 rounded-full transition-colors border shadow"
+                  [ngClass]="savedInListenLater
+                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50 hover:bg-emerald-500/30'
+                    : 'bg-[#1c2228] text-gray-200 border-[#2a343d] hover:border-emerald-500/50 hover:text-emerald-400'"
+                  title="Salvar na fila Quero Ouvir"
+                >
+                  <span>{{ savedInListenLater ? '✓ Na fila Quero Ouvir' : '🔖 Quero Ouvir' }}</span>
+                </button>
               </div>
 
               <h1 class="text-3xl sm:text-4xl font-black text-white mt-2 tracking-tight">
                 {{ album.title }}
               </h1>
               <p class="text-lg text-emerald-400 font-medium mt-1">
-                {{ album.artist }}
+                <a
+                  [routerLink]="['/catalog/artists', getPrimaryArtist(album.artist)]"
+                  class="hover:underline inline-flex items-center gap-1"
+                  title="Ver página do artista e notas no Muly"
+                >
+                  <span>{{ album.artist }}</span>
+                  <span class="text-xs text-gray-500">→</span>
+                </a>
               </p>
 
               <!-- Média de Avaliações -->
@@ -515,6 +535,7 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
 export class AlbumDetailComponent implements OnInit {
   authService = inject(AuthService);
   private catalogService = inject(CatalogService);
+  private profileService = inject(ProfileService);
   private reviewsService = inject(ReviewsService);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
@@ -525,6 +546,8 @@ export class AlbumDetailComponent implements OnInit {
   reviewsSummary: AlbumReviewsSummaryResponse | null = null;
   myReview: ReviewResponse | null = null;
   myTrackReviews: ReviewResponse[] = [];
+  savedInListenLater = false;
+  togglingListenLater = false;
 
   selectedTrack: AlbumTrackResponse | null = null;
   reviewFilter: 'all' | 'album' | 'tracks' | 'selectedTrack' = 'all';
@@ -690,6 +713,7 @@ export class AlbumDetailComponent implements OnInit {
     this.loading = true;
     this.selectedTrack = null;
     this.reviewFilter = 'all';
+    this.savedInListenLater = false;
 
     this.catalogService.getAlbum(spotifyId).subscribe({
       next: (data) => {
@@ -697,6 +721,14 @@ export class AlbumDetailComponent implements OnInit {
         this.loadReviews(spotifyId);
         if (this.authService.isAuthenticated()) {
           this.loadMyReviews(spotifyId);
+          this.profileService.getListenLaterStatus(spotifyId).subscribe({
+            next: (res) => {
+              this.savedInListenLater = !!res?.saved;
+            },
+            error: () => {
+              this.savedInListenLater = false;
+            }
+          });
         } else {
           this.loading = false;
         }
@@ -704,6 +736,29 @@ export class AlbumDetailComponent implements OnInit {
       error: () => {
         this.album = null;
         this.loading = false;
+      }
+    });
+  }
+
+  getPrimaryArtist(artist: string): string {
+    if (!artist) return '';
+    return artist.split(',')[0].trim();
+  }
+
+  toggleListenLater(): void {
+    if (!this.album) return;
+    if (!this.authService.isAuthenticated()) {
+      this.router.navigate(['/login']);
+      return;
+    }
+    this.togglingListenLater = true;
+    this.profileService.toggleListenLater(this.album.externalId).subscribe({
+      next: (res) => {
+        this.savedInListenLater = !!res?.saved;
+        this.togglingListenLater = false;
+      },
+      error: () => {
+        this.togglingListenLater = false;
       }
     });
   }

@@ -21,9 +21,9 @@ import { NavbarComponent } from './shared/components/navbar/navbar.component';
                 <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
               </span>
               <p class="leading-snug">
-                <strong class="font-bold text-emerald-300">Acordando o servidor gratuito...</strong>
+                <strong class="font-bold text-emerald-300">Conectando ao servidor...</strong>
                 <span class="text-emerald-200/90 ml-1">
-                  O servidor entra em modo de economia após inatividade. Os dados serão carregados automaticamente em instantes!
+                  Estamos estabelecendo a conexão. Os dados serão carregados automaticamente em instantes.
                 </span>
               </p>
             </div>

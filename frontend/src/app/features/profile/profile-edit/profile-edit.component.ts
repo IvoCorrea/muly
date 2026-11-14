@@ -186,10 +186,20 @@ interface TopSlot {
             </div>
 
             <div>
-              <label class="flex items-center gap-1.5 text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
-                <span class="inline-block w-3.5 h-3.5 rounded-full bg-red-500 text-white font-black text-[9px] flex items-center justify-center leading-none">as</span>
-                <span>Perfil do Last.fm</span>
-              </label>
+              <div class="flex items-center justify-between mb-1.5">
+                <label class="flex items-center gap-1.5 text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                  <span class="inline-block w-3.5 h-3.5 rounded-full bg-red-500 text-white font-black text-[9px] flex items-center justify-center leading-none">as</span>
+                  <span>Perfil do Last.fm</span>
+                </label>
+                <button
+                  type="button"
+                  (click)="importTopFromLastfm()"
+                  [disabled]="importingLastfm"
+                  class="cursor-pointer disabled:opacity-50 text-[10px] font-black uppercase tracking-wider text-emerald-400 hover:text-emerald-300 transition-colors"
+                >
+                  {{ importingLastfm ? 'Importando...' : '⚡ Importar Top 4' }}
+                </button>
+              </div>
               <input
                 type="text"
                 [(ngModel)]="lastfmProfileUrl"
@@ -407,10 +417,54 @@ interface TopSlot {
 
         <!-- SEÇÃO 4: Top 4 Álbuns -->
         <div class="bg-[#1b2228] border border-[#2a343d] rounded-xl p-6 mb-8">
-          <h2 class="text-xs font-black uppercase tracking-widest text-emerald-400 mb-1">
-            4. Seus 4 Álbuns do Topo
-          </h2>
-          <p class="text-xs text-gray-400 mb-6">Escolha quatro álbuns fundamentais para exibir em destaque.</p>
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+            <div>
+              <h2 class="text-xs font-black uppercase tracking-widest text-emerald-400 mb-1">
+                4. Seus 4 Álbuns do Topo
+              </h2>
+              <p class="text-xs text-gray-400">Escolha quatro álbuns fundamentais para exibir em destaque.</p>
+            </div>
+            <button
+              type="button"
+              (click)="importTopFromLastfm()"
+              [disabled]="importingLastfm"
+              class="cursor-pointer disabled:opacity-50 inline-flex items-center justify-center gap-1.5 bg-[#12161a] hover:bg-red-500/15 text-red-400 border border-red-500/30 hover:border-red-400 font-bold text-[11px] uppercase tracking-wider px-3.5 py-2 rounded-lg transition-colors shrink-0"
+            >
+              <span>⚡</span>
+              <span>{{ importingLastfm ? 'Buscando no Last.fm...' : 'Importar Top 4 do Last.fm' }}</span>
+            </button>
+          </div>
+
+          @if (showLastfmQuickPrompt) {
+            <div class="mb-5 p-3.5 bg-[#12161a] border border-[#2a343d] rounded-lg flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+              <input
+                type="text"
+                [(ngModel)]="lastfmImportInput"
+                placeholder="Digite seu usuário do Last.fm (ex: seu_usuario)"
+                class="flex-1 bg-[#1b2228] border border-[#2a343d] rounded px-3 py-2 text-xs text-gray-100 placeholder-gray-500 focus:outline-none focus:border-emerald-500"
+              />
+              <button
+                type="button"
+                (click)="importTopFromLastfm(lastfmImportInput)"
+                [disabled]="importingLastfm || !lastfmImportInput.trim()"
+                class="cursor-pointer disabled:opacity-50 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs uppercase tracking-wider px-4 py-2 rounded transition-colors shrink-0"
+              >
+                {{ importingLastfm ? 'Importando...' : 'Buscar Álbuns' }}
+              </button>
+            </div>
+          }
+
+          @if (lastfmImportMessage) {
+            <div class="mb-4 bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs rounded-lg p-3">
+              {{ lastfmImportMessage }}
+            </div>
+          }
+
+          @if (lastfmImportError) {
+            <div class="mb-4 bg-red-500/10 border border-red-500/30 text-red-300 text-xs rounded-lg p-3">
+              {{ lastfmImportError }}
+            </div>
+          }
 
           <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             @for (slot of topSlots; track slot.position) {
@@ -557,6 +611,12 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
 
   uploadingAvatar = false;
   avatarError = '';
+
+  importingLastfm = false;
+  showLastfmQuickPrompt = false;
+  lastfmImportInput = '';
+  lastfmImportMessage = '';
+  lastfmImportError = '';
 
   loading = true;
   loadError = false;
@@ -946,6 +1006,44 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
       this.searchingSlot = false;
       this.showSlotDropdown = false;
     }
+  }
+
+  importTopFromLastfm(explicitUser?: string): void {
+    const target = (explicitUser ?? this.lastfmProfileUrl ?? this.lastfmImportInput).trim();
+    this.lastfmImportMessage = '';
+    this.lastfmImportError = '';
+
+    if (!target) {
+      this.showLastfmQuickPrompt = true;
+      this.lastfmImportError = 'Informe seu usuário ou URL do Last.fm para importar seu Top 4.';
+      return;
+    }
+
+    this.importingLastfm = true;
+    this.profileService.importLastfmTopAlbums(target).subscribe({
+      next: (albums) => {
+        this.importingLastfm = false;
+        if (!albums || albums.length === 0) {
+          this.lastfmImportError = 'Não encontramos álbuns públicos para este usuário no Last.fm.';
+          return;
+        }
+        const imported = albums.slice(0, 4);
+        this.topSlots.forEach((slot, idx) => {
+          if (imported[idx]) {
+            slot.album = imported[idx];
+          }
+        });
+        if (!this.lastfmProfileUrl.trim()) {
+          this.lastfmProfileUrl = target;
+        }
+        this.showLastfmQuickPrompt = false;
+        this.lastfmImportMessage = `${imported.length} álbum(ns) importado(s) do Last.fm! Clique em "Salvar Alterações" abaixo para confirmar.`;
+      },
+      error: (err) => {
+        this.importingLastfm = false;
+        this.lastfmImportError = err.error?.message || 'Erro ao buscar dados no Last.fm. Verifique o usuário informado.';
+      }
+    });
   }
 
   saveProfileChanges(): void {

@@ -3,6 +3,8 @@ package com.muly.reviews.service;
 import com.muly.auth.model.User;
 import com.muly.auth.service.UserService;
 import com.muly.catalog.dto.AlbumResponse;
+import com.muly.catalog.dto.ArtistDetailResponse;
+import com.muly.catalog.dto.RankedAlbumResponse;
 import com.muly.catalog.model.Album;
 import com.muly.catalog.service.CatalogService;
 import com.muly.common.exception.ResourceNotFoundException;
@@ -471,6 +473,148 @@ public class ReviewService {
     public long countReviewsByUser(String username) {
         String normalized = username.toLowerCase(Locale.ROOT);
         return reviewRepository.countByUserUsername(normalized) + trackReviewRepository.countByUserUsername(normalized);
+    }
+
+    @Transactional(readOnly = true)
+    public List<RankedAlbumResponse> getTopRankedAlbums(int limit) {
+        int safeLimit = Math.max(1, Math.min(limit, 100));
+        Map<String, AlbumRatingStats> statsByExternalId = buildAlbumRatingStatsMap();
+
+        return statsByExternalId.values().stream()
+                .filter(s -> s.ratings.size() > 0)
+                .map(s -> toRankedAlbumResponse(catalogService.toResponse(s.album), s))
+                .sorted(Comparator
+                        .comparing(RankedAlbumResponse::averageRating, Comparator.nullsLast(Comparator.reverseOrder()))
+                        .thenComparing(RankedAlbumResponse::totalReviews, Comparator.reverseOrder())
+                        .thenComparing(RankedAlbumResponse::title, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)))
+                .limit(safeLimit)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public ArtistDetailResponse getArtistDetail(String artistName) {
+        String cleanArtist = artistName != null ? artistName.trim() : "";
+        if (cleanArtist.isBlank()) {
+            throw new ResourceNotFoundException("Artista não encontrado.");
+        }
+        String normQuery = cleanArtist.toLowerCase(Locale.ROOT);
+
+        Map<String, AlbumResponse> mergedAlbums = new LinkedHashMap<>();
+        for (AlbumResponse local : catalogService.findLocalAlbumsByArtist(cleanArtist)) {
+            if (local.externalId() != null) {
+                mergedAlbums.put(local.externalId(), local);
+            }
+        }
+
+        List<AlbumResponse> spotifyAlbums = catalogService.searchAlbums(cleanArtist);
+        List<AlbumResponse> filteredSpotify = spotifyAlbums.stream()
+                .filter(a -> a.artist() != null && a.artist().toLowerCase(Locale.ROOT).contains(normQuery))
+                .toList();
+        List<AlbumResponse> toAdd = filteredSpotify.isEmpty() && mergedAlbums.isEmpty() ? spotifyAlbums : filteredSpotify;
+        for (AlbumResponse sp : toAdd) {
+            if (sp.externalId() != null) {
+                mergedAlbums.putIfAbsent(sp.externalId(), sp);
+            }
+        }
+
+        Map<String, AlbumRatingStats> statsByExternalId = buildAlbumRatingStatsMap();
+
+        long totalArtistReviews = 0L;
+        double ratingSum = 0.0;
+        List<RankedAlbumResponse> rankedList = new ArrayList<>();
+
+        for (AlbumResponse album : mergedAlbums.values()) {
+            AlbumRatingStats stats = statsByExternalId.get(album.externalId());
+            if (stats != null && !stats.ratings.isEmpty()) {
+                for (double r : stats.ratings) {
+                    ratingSum += r;
+                }
+                totalArtistReviews += stats.ratings.size();
+            }
+            rankedList.add(toRankedAlbumResponse(album, stats));
+        }
+
+        rankedList.sort(Comparator
+                .comparing((RankedAlbumResponse a) -> a.averageRating() != null ? 0 : 1)
+                .thenComparing(RankedAlbumResponse::averageRating, Comparator.nullsLast(Comparator.reverseOrder()))
+                .thenComparing(RankedAlbumResponse::totalReviews, Comparator.reverseOrder())
+                .thenComparing(RankedAlbumResponse::releaseYear, Comparator.nullsLast(Comparator.reverseOrder())));
+
+        Double artistAvg = totalArtistReviews > 0
+                ? Math.round((ratingSum / totalArtistReviews) * 10.0) / 10.0
+                : null;
+
+        String displayArtistName = cleanArtist;
+        for (RankedAlbumResponse a : rankedList) {
+            if (a.artist() != null && a.artist().equalsIgnoreCase(cleanArtist)) {
+                displayArtistName = a.artist();
+                break;
+            }
+        }
+
+        return new ArtistDetailResponse(
+                displayArtistName,
+                rankedList.size(),
+                totalArtistReviews,
+                artistAvg,
+                rankedList
+        );
+    }
+
+    private static class AlbumRatingStats {
+        final Album album;
+        final List<Double> ratings = new ArrayList<>();
+
+        AlbumRatingStats(Album album) {
+            this.album = album;
+        }
+    }
+
+    private Map<String, AlbumRatingStats> buildAlbumRatingStatsMap() {
+        Map<String, AlbumRatingStats> statsMap = new LinkedHashMap<>();
+
+        List<Review> allReviews = reviewRepository.findAll();
+        if (allReviews != null) {
+            for (Review r : allReviews) {
+                if (r.getAlbum() == null || r.getAlbum().getExternalId() == null) continue;
+                statsMap.computeIfAbsent(r.getAlbum().getExternalId(), k -> new AlbumRatingStats(r.getAlbum()))
+                        .ratings.add(r.getRating());
+            }
+        }
+
+        List<TrackReview> allTrackReviews = trackReviewRepository.findAll();
+        if (allTrackReviews != null) {
+            for (TrackReview tr : allTrackReviews) {
+                if (tr.getAlbum() == null || tr.getAlbum().getExternalId() == null) continue;
+                statsMap.computeIfAbsent(tr.getAlbum().getExternalId(), k -> new AlbumRatingStats(tr.getAlbum()))
+                        .ratings.add(tr.getRating());
+            }
+        }
+
+        return statsMap;
+    }
+
+    private RankedAlbumResponse toRankedAlbumResponse(AlbumResponse album, AlbumRatingStats stats) {
+        Double avg = null;
+        long total = 0L;
+        if (stats != null && !stats.ratings.isEmpty()) {
+            total = stats.ratings.size();
+            double sum = 0.0;
+            for (double r : stats.ratings) {
+                sum += r;
+            }
+            avg = Math.round((sum / total) * 10.0) / 10.0;
+        }
+        return new RankedAlbumResponse(
+                album.id(),
+                album.externalId(),
+                album.title(),
+                album.artist(),
+                album.releaseYear(),
+                album.coverUrl(),
+                avg,
+                total
+        );
     }
 
     private ReviewResponse toResponse(Review review, String viewerUsername) {

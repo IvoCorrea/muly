@@ -22,6 +22,13 @@ export interface FollowUserResponse {
   followedByMe: boolean;
 }
 
+export interface ProfileBadgeResponse {
+  id: string;
+  icon: string;
+  label: string;
+  description: string;
+}
+
 export interface UserProfileResponse {
   username: string;
   displayName: string | null;
@@ -40,6 +47,7 @@ export interface UserProfileResponse {
   followsMe?: boolean;
   tasteMatchPercentage?: number | null;
   commonItemsCount?: number;
+  badges?: ProfileBadgeResponse[];
 }
 
 export interface UpdateProfileInfoRequest {

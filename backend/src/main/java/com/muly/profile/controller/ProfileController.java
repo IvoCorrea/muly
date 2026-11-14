@@ -1,5 +1,6 @@
 package com.muly.profile.controller;
 
+import com.muly.catalog.dto.AlbumResponse;
 import com.muly.profile.dto.*;
 import com.muly.profile.service.ProfileService;
 import jakarta.validation.Valid;
@@ -8,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/profile")
@@ -120,5 +122,35 @@ public class ProfileController {
     ) {
         String viewer = principal != null ? principal.getName() : null;
         return ResponseEntity.ok(profileService.getFollowing(username, viewer));
+    }
+
+    @GetMapping("/{username}/listen-later")
+    public ResponseEntity<List<AlbumResponse>> getListenLater(@PathVariable String username) {
+        return ResponseEntity.ok(profileService.getListenLater(username));
+    }
+
+    @GetMapping("/me/listen-later/{spotifyId}")
+    public ResponseEntity<Map<String, Boolean>> getListenLaterStatus(
+            @PathVariable String spotifyId,
+            Principal principal
+    ) {
+        boolean saved = profileService.isSavedInListenLater(principal.getName(), spotifyId);
+        return ResponseEntity.ok(Map.of("saved", saved));
+    }
+
+    @PostMapping("/me/listen-later/{spotifyId}")
+    public ResponseEntity<Map<String, Boolean>> toggleListenLater(
+            @PathVariable String spotifyId,
+            Principal principal
+    ) {
+        boolean saved = profileService.toggleListenLater(principal.getName(), spotifyId);
+        return ResponseEntity.ok(Map.of("saved", saved));
+    }
+
+    @GetMapping("/me/lastfm/top-albums")
+    public ResponseEntity<List<AlbumResponse>> importLastfmTopAlbums(
+            @RequestParam("username") String username
+    ) {
+        return ResponseEntity.ok(profileService.importLastfmTopAlbums(username));
     }
 }

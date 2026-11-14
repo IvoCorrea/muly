@@ -202,7 +202,7 @@ const FALLBACK_FEATURED_ALBUMS: AlbumResponse[] = [
                 <div>
                   <p class="text-xs font-bold text-emerald-300">Sincronizando feed da comunidade...</p>
                   <p class="text-[11px] text-gray-400">
-                    O servidor estava em repouso e está iniciando. As resenhas aparecerão automaticamente em alguns segundos!
+                    Estabelecendo conexão com o servidor. As resenhas aparecerão automaticamente em instantes.
                   </p>
                 </div>
               </div>
@@ -344,9 +344,9 @@ const FALLBACK_FEATURED_ALBUMS: AlbumResponse[] = [
                 Explorar Comunidade
               </button>
             } @else if (feedError) {
-              <p class="text-sm font-bold text-gray-200">O servidor ainda está terminando de iniciar</p>
+              <p class="text-sm font-bold text-gray-200">Não foi possível carregar o feed no momento</p>
               <p class="text-xs text-gray-400 mt-1 max-w-md mx-auto">
-                Após períodos de inatividade, o servidor gratuito leva alguns segundos extras para acordar.
+                A conexão com o servidor está levando mais tempo que o normal. Tente atualizar novamente.
               </p>
               <button
                 type="button"

@@ -1,7 +1,8 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import { AlbumResponse } from '../models/catalog.models';
 import {
   FollowUserResponse,
   SetCurrentTrackRequest,
@@ -67,5 +68,22 @@ export class ProfileService {
 
   public updateTopAlbums(request: UpdateTopAlbumsRequest): Observable<UserProfileResponse> {
     return this.http.put<UserProfileResponse>(`${environment.apiUrl}/profile/me/top-albums`, request);
+  }
+
+  public getListenLater(username: string): Observable<AlbumResponse[]> {
+    return this.http.get<AlbumResponse[]>(`${environment.apiUrl}/profile/${username}/listen-later`);
+  }
+
+  public getListenLaterStatus(spotifyId: string): Observable<{ saved: boolean }> {
+    return this.http.get<{ saved: boolean }>(`${environment.apiUrl}/profile/me/listen-later/${spotifyId}`);
+  }
+
+  public toggleListenLater(spotifyId: string): Observable<{ saved: boolean }> {
+    return this.http.post<{ saved: boolean }>(`${environment.apiUrl}/profile/me/listen-later/${spotifyId}`, {});
+  }
+
+  public importLastfmTopAlbums(lastfmUsernameOrUrl: string): Observable<AlbumResponse[]> {
+    const params = new HttpParams().set('username', lastfmUsernameOrUrl);
+    return this.http.get<AlbumResponse[]>(`${environment.apiUrl}/profile/me/lastfm/top-albums`, { params });
   }
 }

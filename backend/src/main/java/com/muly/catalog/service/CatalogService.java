@@ -111,6 +111,17 @@ public class CatalogService {
                 .orElseThrow(() -> new ResourceNotFoundException("Album not found with id: " + id));
     }
 
+    @Transactional(readOnly = true)
+    public List<AlbumResponse> findLocalAlbumsByArtist(String artistName) {
+        if (artistName == null || artistName.isBlank()) {
+            return List.of();
+        }
+        return albumRepository.findByArtistContainingIgnoreCaseOrderByReleaseYearDesc(artistName.trim())
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
     public AlbumResponse toResponse(Album album) {
         return new AlbumResponse(
                 album.getId(),

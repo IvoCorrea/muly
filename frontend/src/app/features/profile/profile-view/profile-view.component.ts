@@ -3,8 +3,9 @@ import { Component, inject, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Meta, Title } from '@angular/platform-browser';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { AlbumResponse } from '../../../core/models/catalog.models';
 import { AlbumListSummaryResponse } from '../../../core/models/lists.models';
-import { FollowUserResponse, UserProfileResponse } from '../../../core/models/profile.models';
+import { FollowUserResponse, ProfileBadgeResponse, UserProfileResponse } from '../../../core/models/profile.models';
 import { ReviewResponse } from '../../../core/models/reviews.models';
 import { AuthService } from '../../../core/services/auth.service';
 import { CatalogService } from '../../../core/services/catalog.service';
@@ -12,7 +13,7 @@ import { ListsService } from '../../../core/services/lists.service';
 import { ProfileService } from '../../../core/services/profile.service';
 import { ReviewsService } from '../../../core/services/reviews.service';
 import { AlbumCardComponent } from '../../../shared/components/album-card/album-card.component';
-import { ShareCardData, ShareCardModalComponent } from '../../../shared/components/share-card-modal/share-card-modal.component';
+import { CollageItemData, ShareCardData, ShareCardModalComponent } from '../../../shared/components/share-card-modal/share-card-modal.component';
 import { StarRatingComponent } from '../../../shared/components/star-rating/star-rating.component';
 
 @Component({
@@ -137,11 +138,26 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                     </a>
                   }
                 </div>
+
+                <!-- Selos / Conquistas Colecionáveis -->
+                @if (displayBadges.length > 0) {
+                  <div class="mt-3 flex flex-wrap items-center gap-1.5">
+                    @for (badge of displayBadges; track badge.id) {
+                      <span
+                        class="inline-flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/25 text-emerald-300 px-2.5 py-0.5 rounded-full text-[11px] font-bold"
+                        [title]="badge.description"
+                      >
+                        <span>{{ badge.icon }}</span>
+                        <span>{{ badge.label }}</span>
+                      </span>
+                    }
+                  </div>
+                }
               </div>
             </div>
 
-            <!-- Botão de Ação (Customizar Perfil ou Seguir/Seguindo) -->
-            <div class="flex flex-col items-stretch sm:items-end gap-3 shrink-0">
+            <!-- Botão de Ação (Customizar Perfil ou Seguir/Seguindo + Collage Stories) -->
+            <div class="flex flex-col items-stretch sm:items-end gap-2.5 shrink-0">
               @if (isOwnProfile) {
                 <a
                   routerLink="/profile/me/edit"
@@ -162,13 +178,35 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                   {{ profile.followedByMe ? '✓ Seguindo' : '+ Seguir' }}
                 </button>
               }
+              <button
+                type="button"
+                (click)="openCollageShareModal()"
+                class="cursor-pointer inline-flex items-center justify-center gap-1.5 bg-[#12161a] hover:bg-[#242c34] text-emerald-400 border border-emerald-500/35 font-bold text-[11px] uppercase tracking-wider px-4 py-2 rounded-lg transition-colors shadow-sm"
+                title="Gerar Collage 3x3 e card formato Stories (9:16)"
+              >
+                <span>📸</span>
+                <span>Collage / Stories</span>
+              </button>
             </div>
           </div>
 
           <!-- Card de Compatibilidade Musical (Taste Match %) quando visita outro perfil -->
           @if (authService.isAuthenticated() && !isOwnProfile) {
             <div class="mt-6 pt-5 border-t border-[#242c34] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              @if (profile.tasteMatchPercentage !== null && profile.tasteMatchPercentage !== undefined) {
+              @if (!tasteMatchRevealed) {
+                <div class="flex items-center gap-2.5 text-xs text-gray-400">
+                  <span class="text-emerald-400 text-base">🎧</span>
+                  <span>Quer descobrir o quanto seu gosto musical combina com &#64;{{ profile.username }}?</span>
+                </div>
+                <button
+                  type="button"
+                  (click)="tasteMatchRevealed = true"
+                  class="cursor-pointer inline-flex items-center justify-center gap-2 bg-[#12161a] hover:bg-emerald-500/15 text-emerald-400 border border-emerald-500/40 hover:border-emerald-400 font-bold text-xs uppercase tracking-wider px-4 py-2 rounded-lg transition-all shadow-sm shrink-0"
+                >
+                  <span>🎧</span>
+                  <span>Calcular Match Musical</span>
+                </button>
+              } @else if (profile.tasteMatchPercentage !== null && profile.tasteMatchPercentage !== undefined) {
                 <div class="flex items-center gap-3.5">
                   <div
                     class="w-12 h-12 rounded-xl flex items-center justify-center font-black text-sm border shrink-0 shadow"
@@ -232,7 +270,12 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                       {{ profile.favoriteAlbum.title }}
                     </h3>
                     <p class="text-sm text-emerald-400 font-semibold mt-0.5 truncate">
-                      {{ profile.favoriteAlbum.artist }}
+                      <a
+                        [routerLink]="['/catalog/artists', getPrimaryArtist(profile.favoriteAlbum.artist)]"
+                        class="hover:underline"
+                      >
+                        {{ profile.favoriteAlbum.artist }}
+                      </a>
                     </p>
                     <div class="mt-4 flex flex-wrap items-center justify-center sm:justify-start gap-2">
                       <a
@@ -315,7 +358,14 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                       {{ profile.currentTrack.title }}
                     </h3>
                     <p class="text-sm text-emerald-400 font-semibold mt-0.5 truncate">
-                      {{ profile.currentTrack.artist }}
+                      @if (profile.currentTrack.artist) {
+                        <a
+                          [routerLink]="['/catalog/artists', getPrimaryArtist(profile.currentTrack.artist)]"
+                          class="hover:underline"
+                        >
+                          {{ profile.currentTrack.artist }}
+                        </a>
+                      }
                     </p>
                     @if (profile.currentTrack.albumTitle) {
                       <p class="text-xs text-gray-400 truncate mt-0.5">
@@ -383,6 +433,45 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
             </div>
           }
         </div>
+
+        <!-- Seção: Quero Ouvir (Listen Later) -->
+        @if (listenLaterAlbums.length > 0 || isOwnProfile) {
+          <div class="mb-12">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-xs font-black uppercase tracking-widest text-gray-300 flex items-center gap-2">
+                <span>🔖</span>
+                <span>Quero Ouvir ({{ listenLaterAlbums.length }})</span>
+              </h2>
+              <a routerLink="/catalog" class="text-xs font-bold text-emerald-400 hover:underline uppercase tracking-wider">
+                Explorar Catálogo →
+              </a>
+            </div>
+
+            @if (listenLaterAlbums.length > 0) {
+              <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-4">
+                @for (album of listenLaterAlbums; track album.externalId) {
+                  <div class="relative group/ll">
+                    <app-album-card [album]="album" [showSpotifyLink]="true" />
+                    @if (isOwnProfile) {
+                      <button
+                        type="button"
+                        (click)="removeFromListenLater(album, $event)"
+                        class="cursor-pointer absolute top-2 right-2 z-10 w-6 h-6 rounded-full bg-black/75 hover:bg-red-500 text-white text-[10px] font-bold flex items-center justify-center opacity-90 sm:opacity-0 sm:group-hover/ll:opacity-100 transition-all shadow"
+                        title="Remover da fila Quero Ouvir"
+                      >
+                        ✕
+                      </button>
+                    }
+                  </div>
+                }
+              </div>
+            } @else {
+              <div class="p-6 border border-dashed border-[#2a343d] rounded-lg text-center text-xs text-gray-500">
+                Sua fila "Quero Ouvir" está vazia. Abra qualquer álbum no catálogo e clique em <strong class="text-emerald-400">🔖 Quero Ouvir</strong> para salvar aqui!
+              </div>
+            }
+          </div>
+        }
 
         <!-- Seção: Listas de Álbuns do Usuário -->
         <div class="mb-12">
@@ -476,7 +565,13 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                         <span class="font-bold text-sm text-gray-100 group-hover/rev:text-emerald-400 transition-colors">
                           {{ rev.albumTitle }}
                         </span>
-                        <span class="text-xs text-gray-400">por {{ rev.albumArtist }}</span>
+                        <a
+                          [routerLink]="['/catalog/artists', getPrimaryArtist(rev.albumArtist)]"
+                          (click)="$event.stopPropagation()"
+                          class="text-xs text-gray-400 hover:text-emerald-400 hover:underline transition-colors"
+                        >
+                          por {{ rev.albumArtist }}
+                        </a>
                         @if (rev.trackNumber !== null) {
                           <span class="text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full">
                             🎵 Faixa #{{ rev.trackNumber }} • {{ rev.trackTitle }}
@@ -667,8 +762,10 @@ export class ProfileViewComponent implements OnInit, OnDestroy {
   profile: UserProfileResponse | null = null;
   userReviews: ReviewResponse[] = [];
   userLists: AlbumListSummaryResponse[] = [];
+  listenLaterAlbums: AlbumResponse[] = [];
   loading = true;
   togglingFollow = false;
+  tasteMatchRevealed = false;
 
   followModalOpen = false;
   followModalTab: 'followers' | 'following' = 'followers';
@@ -698,6 +795,24 @@ export class ProfileViewComponent implements OnInit, OnDestroy {
     return Math.min(100, (this.currentTimeSec / this.durationSec) * 100);
   }
 
+  get displayBadges(): ProfileBadgeResponse[] {
+    const base = [...(this.profile?.badges || [])];
+    if (this.userLists.length > 0 && !base.some(b => b.id === 'curator')) {
+      base.push({
+        id: 'curator',
+        icon: '📋',
+        label: 'Curador Musical',
+        description: 'Criou listas temáticas de álbuns no Muly'
+      });
+    }
+    return base;
+  }
+
+  getPrimaryArtist(artist: string): string {
+    if (!artist) return '';
+    return artist.split(',')[0].trim();
+  }
+
   ngOnInit(): void {
     this.route.paramMap.subscribe(params => {
       const username = params.get('username');
@@ -715,11 +830,13 @@ export class ProfileViewComponent implements OnInit, OnDestroy {
 
   loadProfile(username: string): void {
     this.loading = true;
+    this.tasteMatchRevealed = false;
     this.profileService.getProfile(username).subscribe({
       next: (data) => {
         this.profile = data;
         this.updateMetaTags(data);
         this.loadLists(username);
+        this.loadListenLater(username);
         this.loadReviews(username);
       },
       error: () => {
@@ -854,6 +971,29 @@ export class ProfileViewComponent implements OnInit, OnDestroy {
     });
   }
 
+  loadListenLater(username: string): void {
+    this.profileService.getListenLater(username).subscribe({
+      next: (albums) => {
+        this.listenLaterAlbums = albums || [];
+      },
+      error: () => {
+        this.listenLaterAlbums = [];
+      }
+    });
+  }
+
+  removeFromListenLater(album: AlbumResponse, event?: Event): void {
+    event?.stopPropagation();
+    event?.preventDefault();
+    this.profileService.toggleListenLater(album.externalId).subscribe({
+      next: (res) => {
+        if (!res?.saved) {
+          this.listenLaterAlbums = this.listenLaterAlbums.filter(a => a.externalId !== album.externalId);
+        }
+      }
+    });
+  }
+
   loadReviews(username: string): void {
     this.reviewsService.getReviewsByUser(username).subscribe({
       next: (reviews) => {
@@ -877,6 +1017,47 @@ export class ProfileViewComponent implements OnInit, OnDestroy {
   }
 
   shareProfile(): void {
+    this.openProfileShareModal('post', 'highlights');
+  }
+
+  openCollageShareModal(): void {
+    this.openProfileShareModal('stories', 'collage');
+  }
+
+  private buildCollageItems(): CollageItemData[] {
+    const items: CollageItemData[] = [];
+    const seen = new Set<string>();
+
+    for (const rev of this.userReviews) {
+      if (!rev.albumExternalId || seen.has(rev.albumExternalId)) continue;
+      seen.add(rev.albumExternalId);
+      items.push({
+        title: rev.albumTitle,
+        artist: rev.albumArtist,
+        coverUrl: rev.albumCoverUrl,
+        rating: rev.rating
+      });
+      if (items.length >= 9) break;
+    }
+
+    if (items.length < 9 && this.profile?.topAlbums) {
+      for (const top of this.profile.topAlbums) {
+        if (!top.album?.externalId || seen.has(top.album.externalId)) continue;
+        seen.add(top.album.externalId);
+        items.push({
+          title: top.album.title,
+          artist: top.album.artist,
+          coverUrl: top.album.coverUrl,
+          rating: null
+        });
+        if (items.length >= 9) break;
+      }
+    }
+
+    return items;
+  }
+
+  private openProfileShareModal(initialFormat: 'post' | 'stories', initialMode: 'highlights' | 'collage'): void {
     if (!this.profile) return;
     const url = `${window.location.origin}/profile/${this.profile.username}`;
     navigator.clipboard?.writeText(url);
@@ -896,6 +1077,9 @@ export class ProfileViewComponent implements OnInit, OnDestroy {
       username: this.profile.username,
       coverUrl: this.profile.favoriteAlbum?.coverUrl || this.profile.avatarUrl || null,
       gridCovers: topCovers.length >= 2 ? topCovers : undefined,
+      collageItems: this.buildCollageItems(),
+      initialFormat,
+      initialMode,
       reviewText: this.profile.bio
         ? this.profile.bio
         : (this.profile.currentTrack

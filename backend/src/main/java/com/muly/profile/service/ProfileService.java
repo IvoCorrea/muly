@@ -8,8 +8,10 @@ import com.muly.catalog.service.CatalogService;
 import com.muly.catalog.service.SpotifyService;
 import com.muly.common.exception.ResourceNotFoundException;
 import com.muly.profile.dto.*;
+import com.muly.profile.model.ListenLaterItem;
 import com.muly.profile.model.TopAlbum;
 import com.muly.profile.model.UserFollow;
+import com.muly.profile.repository.ListenLaterRepository;
 import com.muly.profile.repository.TopAlbumRepository;
 import com.muly.profile.repository.UserFollowRepository;
 import com.muly.reviews.model.Review;
@@ -18,17 +20,29 @@ import com.muly.reviews.repository.ReviewRepository;
 import com.muly.reviews.repository.TrackReviewRepository;
 import com.muly.reviews.service.ReviewService;
 import com.muly.social.service.NotificationService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestClient;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
 public class ProfileService {
 
+    private static final Pattern LASTFM_ALBUM_LINK_PATTERN =
+            Pattern.compile("href=[\"']/music/([^/\"'?#]+)/([^/\"'?#]+)[\"']");
+
     private final TopAlbumRepository topAlbumRepository;
     private final UserFollowRepository userFollowRepository;
+    private final ListenLaterRepository listenLaterRepository;
     private final ReviewRepository reviewRepository;
     private final TrackReviewRepository trackReviewRepository;
     private final UserService userService;
@@ -37,6 +51,7 @@ public class ProfileService {
     private final SpotifyService spotifyService;
     private final ImageKitService imageKitService;
     private final NotificationService notificationService;
+    private final RestClient restClient;
 
     public ProfileService(
             TopAlbumRepository topAlbumRepository,
@@ -50,8 +65,38 @@ public class ProfileService {
             ImageKitService imageKitService,
             NotificationService notificationService
     ) {
+        this(
+                topAlbumRepository,
+                userFollowRepository,
+                null,
+                reviewRepository,
+                trackReviewRepository,
+                userService,
+                catalogService,
+                reviewService,
+                spotifyService,
+                imageKitService,
+                notificationService
+        );
+    }
+
+    @Autowired
+    public ProfileService(
+            TopAlbumRepository topAlbumRepository,
+            UserFollowRepository userFollowRepository,
+            ListenLaterRepository listenLaterRepository,
+            ReviewRepository reviewRepository,
+            TrackReviewRepository trackReviewRepository,
+            UserService userService,
+            CatalogService catalogService,
+            ReviewService reviewService,
+            SpotifyService spotifyService,
+            ImageKitService imageKitService,
+            NotificationService notificationService
+    ) {
         this.topAlbumRepository = topAlbumRepository;
         this.userFollowRepository = userFollowRepository;
+        this.listenLaterRepository = listenLaterRepository;
         this.reviewRepository = reviewRepository;
         this.trackReviewRepository = trackReviewRepository;
         this.userService = userService;
@@ -60,6 +105,9 @@ public class ProfileService {
         this.spotifyService = spotifyService;
         this.imageKitService = imageKitService;
         this.notificationService = notificationService;
+        this.restClient = RestClient.builder()
+                .requestFactory(new SimpleClientHttpRequestFactory())
+                .build();
     }
 
     @Transactional(readOnly = true)
@@ -121,6 +169,14 @@ public class ProfileService {
             );
         }
 
+        List<ProfileBadgeResponse> badges = computeBadges(
+                user,
+                favoriteAlbum,
+                currentTrack,
+                topEntities,
+                followersCount
+        );
+
         return new UserProfileResponse(
                 user.getUsername(),
                 user.getDisplayName(),
@@ -138,8 +194,246 @@ public class ProfileService {
                 followedByMe,
                 followsMe,
                 tasteMatchPercentage,
-                commonItemsCount
+                commonItemsCount,
+                badges
         );
+    }
+
+    private List<ProfileBadgeResponse> computeBadges(
+            User user,
+            AlbumResponse favoriteAlbum,
+            CurrentTrackResponse currentTrack,
+            List<TopAlbum> topEntities,
+            long followersCount
+    ) {
+        List<ProfileBadgeResponse> badges = new ArrayList<>();
+        badges.add(new ProfileBadgeResponse(
+                "pioneer",
+                "🌱",
+                "Membro Pioneiro",
+                "Faz parte da geração fundadora do Muly"
+        ));
+
+        List<Review> albumRevs = reviewRepository.findByUserUsernameOrderByCreatedAtDesc(user.getUsername());
+        List<TrackReview> trackRevs = trackReviewRepository.findByUserUsernameOrderByCreatedAtDesc(user.getUsername());
+
+        if (!albumRevs.isEmpty()) {
+            badges.add(new ProfileBadgeResponse(
+                    "first_review",
+                    "✍️",
+                    "Primeira Crítica",
+                    "Publicou sua primeira avaliação de álbum"
+            ));
+        }
+
+        if (albumRevs.size() >= 10) {
+            badges.add(new ProfileBadgeResponse(
+                    "album_critic",
+                    "💿",
+                    "Crítico de Álbuns",
+                    "Avaliou 10 ou mais álbuns no Muly"
+            ));
+        }
+
+        if (trackRevs.size() >= 5) {
+            badges.add(new ProfileBadgeResponse(
+                    "track_critic",
+                    "🎵",
+                    "Ouvido Absoluto",
+                    "Avaliou 5 ou mais faixas individuais"
+            ));
+        }
+
+        Set<String> distinctArtists = new HashSet<>();
+        for (Review r : albumRevs) {
+            if (r.getAlbum() != null && r.getAlbum().getArtist() != null && !r.getAlbum().getArtist().isBlank()) {
+                distinctArtists.add(r.getAlbum().getArtist().trim().toLowerCase(Locale.ROOT));
+            }
+        }
+        for (TrackReview tr : trackRevs) {
+            if (tr.getAlbum() != null && tr.getAlbum().getArtist() != null && !tr.getAlbum().getArtist().isBlank()) {
+                distinctArtists.add(tr.getAlbum().getArtist().trim().toLowerCase(Locale.ROOT));
+            }
+        }
+        for (TopAlbum top : topEntities) {
+            if (top.getAlbum() != null && top.getAlbum().getArtist() != null && !top.getAlbum().getArtist().isBlank()) {
+                distinctArtists.add(top.getAlbum().getArtist().trim().toLowerCase(Locale.ROOT));
+            }
+        }
+        if (favoriteAlbum != null && favoriteAlbum.artist() != null && !favoriteAlbum.artist().isBlank()) {
+            distinctArtists.add(favoriteAlbum.artist().trim().toLowerCase(Locale.ROOT));
+        }
+        if (distinctArtists.size() >= 5) {
+            badges.add(new ProfileBadgeResponse(
+                    "eclectic",
+                    "🌍",
+                    "Eclético",
+                    "Avaliou obras de 5 ou mais artistas diferentes"
+            ));
+        }
+
+        if (favoriteAlbum != null && topEntities.size() == 4 && currentTrack != null) {
+            badges.add(new ProfileBadgeResponse(
+                    "complete_profile",
+                    "✨",
+                    "Identidade Sonora",
+                    "Completou Álbum Favorito, Top 4 e Música do Momento"
+            ));
+        }
+
+        if (followersCount >= 3) {
+            badges.add(new ProfileBadgeResponse(
+                    "influencer",
+                    "🔥",
+                    "Influente",
+                    "Conquistou seguidores na comunidade Muly"
+            ));
+        }
+
+        return badges;
+    }
+
+    @Transactional(readOnly = true)
+    public List<AlbumResponse> getListenLater(String username) {
+        if (listenLaterRepository == null) {
+            return List.of();
+        }
+        User user = userService.getByUsername(username);
+        return listenLaterRepository.findByUserUsernameOrderByCreatedAtDesc(user.getUsername())
+                .stream()
+                .map(item -> catalogService.toResponse(item.getAlbum()))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public boolean isSavedInListenLater(String username, String spotifyId) {
+        if (listenLaterRepository == null || spotifyId == null || spotifyId.isBlank()) {
+            return false;
+        }
+        User user = userService.getByUsername(username);
+        return listenLaterRepository.existsByUserUsernameAndAlbumExternalId(user.getUsername(), spotifyId.trim());
+    }
+
+    @Transactional
+    public boolean toggleListenLater(String username, String spotifyId) {
+        if (listenLaterRepository == null) {
+            return false;
+        }
+        User user = userService.getByUsername(username);
+        String cleanId = spotifyId.trim();
+
+        Optional<ListenLaterItem> existing = listenLaterRepository
+                .findByUserUsernameAndAlbumExternalId(user.getUsername(), cleanId);
+
+        if (existing.isPresent()) {
+            listenLaterRepository.delete(existing.get());
+            return false;
+        }
+
+        AlbumResponse albumDto = catalogService.getOrCreateAlbum(cleanId);
+        Album album = catalogService.getAlbumEntityById(albumDto.id());
+        ListenLaterItem item = ListenLaterItem.builder()
+                .user(user)
+                .album(album)
+                .build();
+        listenLaterRepository.save(item);
+        return true;
+    }
+
+    public List<AlbumResponse> importLastfmTopAlbums(String lastfmUserOrUrl) {
+        String lastfmUsername = extractLastfmUsername(lastfmUserOrUrl);
+
+        List<String[]> pairs = fetchLastfmAlbumPairs("https://www.last.fm/user/" + lastfmUsername + "/library/albums");
+        if (pairs.isEmpty()) {
+            pairs = fetchLastfmAlbumPairs("https://www.last.fm/user/" + lastfmUsername);
+        }
+
+        List<AlbumResponse> matchedAlbums = new ArrayList<>();
+        Set<String> seenExternalIds = new HashSet<>();
+
+        for (String[] pair : pairs) {
+            if (matchedAlbums.size() >= 4) {
+                break;
+            }
+            String artist = pair[0];
+            String albumTitle = pair[1];
+
+            List<AlbumResponse> results = catalogService.searchAlbums(albumTitle + " " + artist);
+            if (results.isEmpty()) {
+                results = catalogService.searchAlbums(albumTitle);
+            }
+
+            for (AlbumResponse candidate : results) {
+                if (candidate.externalId() != null && seenExternalIds.add(candidate.externalId())) {
+                    matchedAlbums.add(candidate);
+                    break;
+                }
+            }
+        }
+
+        return matchedAlbums;
+    }
+
+    private String extractLastfmUsername(String input) {
+        if (input == null || input.isBlank()) {
+            throw new IllegalArgumentException("Informe seu usuário ou link do Last.fm.");
+        }
+        String trimmed = input.trim();
+        int idx = trimmed.toLowerCase(Locale.ROOT).indexOf("last.fm/user/");
+        if (idx >= 0) {
+            String after = trimmed.substring(idx + "last.fm/user/".length());
+            int slash = after.indexOf('/');
+            if (slash >= 0) after = after.substring(0, slash);
+            int q = after.indexOf('?');
+            if (q >= 0) after = after.substring(0, q);
+            trimmed = after;
+        }
+        if (trimmed.startsWith("@")) {
+            trimmed = trimmed.substring(1);
+        }
+        trimmed = trimmed.replaceAll("[^a-zA-Z0-9_.-]", "").trim();
+        if (trimmed.isBlank()) {
+            throw new IllegalArgumentException("Usuário do Last.fm inválido.");
+        }
+        return trimmed;
+    }
+
+    private List<String[]> fetchLastfmAlbumPairs(String url) {
+        try {
+            String html = restClient.get()
+                    .uri(url)
+                    .header(HttpHeaders.USER_AGENT, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                    .retrieve()
+                    .body(String.class);
+
+            if (html == null || html.isBlank()) {
+                return List.of();
+            }
+
+            List<String[]> pairs = new ArrayList<>();
+            Set<String> seenKeys = new HashSet<>();
+            Matcher matcher = LASTFM_ALBUM_LINK_PATTERN.matcher(html);
+
+            while (matcher.find() && pairs.size() < 8) {
+                String rawArtist = matcher.group(1);
+                String rawAlbum = matcher.group(2);
+                if (rawArtist.startsWith("+") || rawAlbum.startsWith("+") || "_".equals(rawAlbum)) {
+                    continue;
+                }
+                String artist = URLDecoder.decode(rawArtist, StandardCharsets.UTF_8).trim();
+                String album = URLDecoder.decode(rawAlbum, StandardCharsets.UTF_8).trim();
+                if (artist.isBlank() || album.isBlank()) {
+                    continue;
+                }
+                String key = (artist + "|" + album).toLowerCase(Locale.ROOT);
+                if (seenKeys.add(key)) {
+                    pairs.add(new String[]{artist, album});
+                }
+            }
+            return pairs;
+        } catch (Exception e) {
+            return List.of();
+        }
     }
 
     private record TasteMatchResult(Integer percentage, int commonCount) {}
