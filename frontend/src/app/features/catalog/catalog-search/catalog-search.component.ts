@@ -6,6 +6,7 @@ import { AlbumResponse, RankedAlbumResponse } from '../../../core/models/catalog
 import { CatalogService } from '../../../core/services/catalog.service';
 import { AlbumCardComponent } from '../../../shared/components/album-card/album-card.component';
 import { StarRatingComponent } from '../../../shared/components/star-rating/star-rating.component';
+import { formatRating } from '../../../core/utils/rating.utils';
 
 @Component({
   selector: 'app-catalog-search',
@@ -209,7 +210,7 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                   <div class="flex items-center gap-2">
                     <app-star-rating [rating]="album.averageRating || 0" [readonly]="true" [showValue]="false" />
                     <span class="text-base font-black text-white">
-                      {{ album.averageRating !== null ? album.averageRating.toFixed(1) : '—' }}
+                      {{ album.averageRating !== null ? formatRating(album.averageRating) : '—' }}
                     </span>
                   </div>
                   <span class="text-[11px] font-semibold text-gray-400 bg-[#12161a] border border-[#242c34] px-2.5 py-1 rounded-full">
@@ -380,5 +381,9 @@ export class CatalogSearchComponent implements OnInit {
         this.loading = false;
       }
     });
+  }
+
+  formatRating(value: number | null | undefined): string {
+    return formatRating(value);
   }
 }

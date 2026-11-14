@@ -5,6 +5,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ArtistDetailResponse, RankedAlbumResponse } from '../../../core/models/catalog.models';
 import { CatalogService } from '../../../core/services/catalog.service';
 import { StarRatingComponent } from '../../../shared/components/star-rating/star-rating.component';
+import { formatRating } from '../../../core/utils/rating.utils';
 
 @Component({
   selector: 'app-artist-detail',
@@ -45,7 +46,7 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
               <div class="bg-[#12161a] border border-[#242c34] rounded-lg px-4 py-3 text-center min-w-[110px]">
                 <span class="block text-[10px] uppercase tracking-wider font-bold text-gray-400">Média Geral</span>
                 <span class="text-2xl font-black text-emerald-400">
-                  {{ artistDetail.averageRating !== null ? artistDetail.averageRating.toFixed(1) : '—' }}
+                  {{ artistDetail.averageRating !== null ? formatRating(artistDetail.averageRating) : '—' }}
                 </span>
                 @if (artistDetail.averageRating !== null) {
                   <span class="text-xs text-gray-500"> / 5.0</span>
@@ -125,7 +126,7 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                   <div class="mt-2 flex items-center gap-2">
                     @if (album.averageRating !== null) {
                       <app-star-rating [rating]="album.averageRating" [readonly]="true" [showValue]="false" />
-                      <span class="text-xs font-black text-emerald-400">{{ album.averageRating.toFixed(1) }}</span>
+                      <span class="text-xs font-black text-emerald-400">{{ formatRating(album.averageRating) }}</span>
                       <span class="text-[10px] text-gray-500">({{ album.totalReviews }})</span>
                     } @else {
                       <span class="text-[11px] text-gray-500 italic">Ainda sem avaliações</span>
@@ -203,5 +204,9 @@ export class ArtistDetailComponent implements OnInit {
         this.loading = false;
       }
     });
+  }
+
+  formatRating(value: number | null | undefined): string {
+    return formatRating(value);
   }
 }

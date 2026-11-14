@@ -18,7 +18,7 @@ public record CreateReviewRequest(
         String trackTitle,
 
         @NotNull(message = "Rating is required.")
-        @DecimalMin(value = "0.5", message = "Rating must be at least 0.5.")
+        @DecimalMin(value = "0.01", message = "Rating must be at least 0.01.")
         @DecimalMax(value = "5.0", message = "Rating cannot exceed 5.0.")
         Double rating,
 

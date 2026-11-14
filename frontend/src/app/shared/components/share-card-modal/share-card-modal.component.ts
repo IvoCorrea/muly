@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, ElementRef, EventEmitter, Input, OnChanges, Output, SimpleChanges, ViewChild } from '@angular/core';
+import { formatRating } from '../../../core/utils/rating.utils';
 
 export interface CollageItemData {
   title: string;
@@ -340,7 +341,7 @@ export class ShareCardModalComponent implements OnChanges {
         ctx.fillStyle = '#10b981';
         ctx.font = `900 ${isStories ? 20 : 12}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
         ctx.textAlign = 'center';
-        ctx.fillText(`★ ${item.rating.toFixed(1)}`, px + pillW / 2, py + (isStories ? 26 : 15));
+        ctx.fillText(`★ ${formatRating(item.rating)}`, px + pillW / 2, py + (isStories ? 26 : 15));
       }
     }
 
@@ -361,7 +362,7 @@ export class ShareCardModalComponent implements OnChanges {
           ctx.fillStyle = '#10b981';
           ctx.font = '900 26px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
           ctx.textAlign = 'right';
-          ctx.fillText(`★ ${item.rating.toFixed(1)}`, W - 96, cursorY);
+          ctx.fillText(`★ ${formatRating(item.rating)}`, W - 96, cursorY);
         }
         cursorY += 50;
       }
@@ -477,7 +478,7 @@ export class ShareCardModalComponent implements OnChanges {
       const starsStr = this.formatStars(this.data.rating);
       ctx.fillStyle = '#10b981';
       ctx.font = `900 ${isStories ? 56 : 36}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
-      ctx.fillText(`${starsStr}  ${this.data.rating.toFixed(1)}`, W / 2, cursorY + (isStories ? 30 : 14));
+      ctx.fillText(`${starsStr}  ${formatRating(this.data.rating)}`, W / 2, cursorY + (isStories ? 30 : 14));
       cursorY += isStories ? 92 : 52;
     }
 

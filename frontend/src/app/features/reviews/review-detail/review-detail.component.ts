@@ -10,6 +10,7 @@ import { ProfileService } from '../../../core/services/profile.service';
 import { ReviewsService } from '../../../core/services/reviews.service';
 import { ShareCardData, ShareCardModalComponent } from '../../../shared/components/share-card-modal/share-card-modal.component';
 import { StarRatingComponent } from '../../../shared/components/star-rating/star-rating.component';
+import { formatRating } from '../../../core/utils/rating.utils';
 
 @Component({
   selector: 'app-review-detail',
@@ -248,7 +249,7 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                   </p>
                 } @else {
                   <p class="text-xs italic text-gray-500">
-                    Avaliação apenas com nota ({{ review.rating.toFixed(1) }} estrelas), sem texto escrito.
+                    Avaliação apenas com nota ({{ formatRating(review.rating) }} estrelas), sem texto escrito.
                   </p>
                 }
               </div>
@@ -666,5 +667,9 @@ export class ReviewDetailComponent implements OnInit {
     if (!dateStr) return '';
     const date = new Date(dateStr);
     return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
+
+  formatRating(value: number | null | undefined): string {
+    return formatRating(value);
   }
 }

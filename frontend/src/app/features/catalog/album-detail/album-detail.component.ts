@@ -11,6 +11,7 @@ import { ProfileService } from '../../../core/services/profile.service';
 import { ReviewsService } from '../../../core/services/reviews.service';
 import { ShareCardData, ShareCardModalComponent } from '../../../shared/components/share-card-modal/share-card-modal.component';
 import { StarRatingComponent } from '../../../shared/components/star-rating/star-rating.component';
+import { formatRating } from '../../../core/utils/rating.utils';
 
 @Component({
   selector: 'app-album-detail',
@@ -100,7 +101,7 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                   <div>
                     <span class="text-[10px] uppercase tracking-wider font-bold text-gray-400 block">Média do Álbum</span>
                     <span class="text-2xl font-black text-white">
-                      {{ reviewsSummary?.averageRating ? (reviewsSummary?.averageRating?.toFixed(1)) : '—' }}
+                      {{ reviewsSummary?.averageRating ? formatRating(reviewsSummary?.averageRating) : '—' }}
                     </span>
                     <span class="text-xs text-gray-500"> / 5.0</span>
                   </div>
@@ -120,7 +121,7 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                         Faixa #{{ selectedTrack.trackNumber }} • {{ selectedTrack.title }}
                       </span>
                       <span class="text-2xl font-black text-white">
-                        {{ getTrackAverageRating(selectedTrack.trackNumber) !== null ? getTrackAverageRating(selectedTrack.trackNumber)!.toFixed(1) : '—' }}
+                        {{ getTrackAverageRating(selectedTrack.trackNumber) !== null ? formatRating(getTrackAverageRating(selectedTrack.trackNumber)) : '—' }}
                       </span>
                       <span class="text-xs text-gray-400"> / 5.0</span>
                     </div>
@@ -160,7 +161,7 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                         @if (friendRev.trackNumber !== null) {
                           <span class="text-[10px] text-gray-400">(#{{ friendRev.trackNumber }})</span>
                         }
-                        <span class="font-black text-emerald-400">★ {{ friendRev.rating.toFixed(1) }}</span>
+                        <span class="font-black text-emerald-400">★ {{ formatRating(friendRev.rating) }}</span>
                       </button>
                     }
                   </div>
@@ -211,7 +212,7 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                         <option [ngValue]="0">💿 Álbum Completo</option>
                         @for (track of album.tracks; track track.trackNumber) {
                           <option [ngValue]="track.trackNumber">
-                            🎵 {{ track.trackNumber }}. {{ track.title }} {{ getMyTrackReview(track.trackNumber) ? ' (★ ' + getMyTrackReview(track.trackNumber)!.rating.toFixed(1) + ')' : '' }}
+                            🎵 {{ track.trackNumber }}. {{ track.title }} {{ getMyTrackReview(track.trackNumber) ? ' (★ ' + formatRating(getMyTrackReview(track.trackNumber)!.rating) + ')' : '' }}
                           </option>
                         }
                       </select>
@@ -226,7 +227,7 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                     (ratingChange)="onRatingSelected($event)"
                   />
                   <span class="text-xs text-gray-400">
-                    {{ currentActiveReview ? 'Sua nota salva (passe na metade esquerda da estrela para ½ ★)' : 'Clique na metade esquerda da estrela para ½ ★ ou direita para ★ inteira' }}
+                    {{ currentActiveReview ? 'Sua nota salva (clique nas estrelas ou digite um valor exato, ex: 4,89)' : 'Clique nas estrelas ou digite uma nota exata (ex: 4,89)' }}
                   </span>
                 </div>
 
@@ -339,14 +340,14 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                           class="text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded"
                           title="Sua nota para esta música"
                         >
-                          ★ {{ myTrkRev.rating.toFixed(1) }}
+                          ★ {{ formatRating(myTrkRev.rating) }}
                         </span>
                       } @else if (getTrackAverageRating(track.trackNumber) !== null) {
                         <span
                           class="text-[10px] font-semibold bg-[#12161a] text-gray-400 px-1.5 py-0.5 rounded"
                           title="Média da comunidade para esta música"
                         >
-                          ★ {{ getTrackAverageRating(track.trackNumber)!.toFixed(1) }}
+                          ★ {{ formatRating(getTrackAverageRating(track.trackNumber)) }}
                         </span>
                       }
                       <span class="text-gray-500 text-[11px] font-mono">
@@ -696,7 +697,7 @@ export class AlbumDetailComponent implements OnInit {
       const all = [...(this.reviewsSummary.reviews || []), ...(this.reviewsSummary.trackReviews || [])];
       const rev = all.find(r => r.id === this.highlightedReviewId);
       if (rev) {
-        title = `★ ${rev.rating.toFixed(1)}/5 — Review de @${rev.username} para ${this.album.title} | Muly`;
+        title = `★ ${formatRating(rev.rating)}/5 — Review de @${rev.username} para ${this.album.title} | Muly`;
         if (rev.reviewText) {
           desc = `"${rev.reviewText}" — @${rev.username} no Muly.`;
         }
@@ -855,7 +856,11 @@ export class AlbumDetailComponent implements OnInit {
     const revs = (this.reviewsSummary?.trackReviews || []).filter(r => r.trackNumber === trackNumber);
     if (revs.length === 0) return null;
     const sum = revs.reduce((acc, r) => acc + r.rating, 0);
-    return Math.round((sum / revs.length) * 10) / 10;
+    return Math.round((sum / revs.length) * 100) / 100;
+  }
+
+  formatRating(value: number | null | undefined): string {
+    return formatRating(value);
   }
 
   onRatingSelected(rating: number): void {

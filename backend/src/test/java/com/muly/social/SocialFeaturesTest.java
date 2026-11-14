@@ -309,10 +309,10 @@ class SocialFeaturesTest {
     }
 
     @Test
-    void shouldSaveHalfStarRatingAndNormalizeToHalfStep() {
-        CreateReviewRequest req = new CreateReviewRequest("spotify-1", null, null, 3.5, "Três estrelas e meia!");
+    void shouldSavePreciseDecimalRatingWithTwoDecimals() {
+        CreateReviewRequest req = new CreateReviewRequest("spotify-1", null, null, 4.89, "Nota exata!");
         ReviewResponse response = reviewService.createOrUpdateReview("ivo", req);
-        assertEquals(3.5, response.rating());
+        assertEquals(4.89, response.rating());
     }
 
     @Test
@@ -387,13 +387,13 @@ class SocialFeaturesTest {
         List<RankedAlbumResponse> ranking = reviewService.getTopRankedAlbums(10);
         assertEquals(1, ranking.size());
         assertEquals("In Rainbows", ranking.get(0).title());
-        assertEquals(4.3, ranking.get(0).averageRating());
+        assertEquals(4.25, ranking.get(0).averageRating());
         assertEquals(2L, ranking.get(0).totalReviews());
 
         ArtistDetailResponse artist = reviewService.getArtistDetail("Radiohead");
         assertEquals("Radiohead", artist.artistName());
         assertEquals(1, artist.totalAlbums());
         assertEquals(2L, artist.totalReviews());
-        assertEquals(4.3, artist.averageRating());
+        assertEquals(4.25, artist.averageRating());
     }
 }

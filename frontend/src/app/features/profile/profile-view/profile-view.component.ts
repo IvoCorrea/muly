@@ -33,7 +33,7 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
       } @else if (profile) {
         
         <!-- Header do Perfil -->
-        <div class="bg-[#1b2228] border border-[#2a343d] rounded-xl p-6 sm:p-8 mb-10 shadow-lg relative overflow-visible">
+        <div class="bg-[#1b2228] border border-[#2a343d] rounded-xl p-6 sm:p-8 mb-10 shadow-lg relative z-30 overflow-visible">
           <!-- Ícone Compartilhar Perfil no Canto Superior Direito -->
           <button
             type="button"
@@ -109,8 +109,9 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                               {{ badge.icon }}
                             </span>
 
-                            <!-- Popover estilo Discord -->
-                            <div class="opacity-0 pointer-events-none group-hover/badge:opacity-100 transition-all duration-150 absolute bottom-full left-1/2 -translate-x-1/2 mb-2.5 z-50 w-52 bg-[#111417] border border-[#2a343d] rounded-xl p-3.5 shadow-2xl text-center">
+                            <!-- Popover estilo Discord (abre para baixo para não ser cortado pela navbar) -->
+                            <div class="opacity-0 pointer-events-none group-hover/badge:opacity-100 transition-all duration-150 absolute top-full left-1/2 -translate-x-1/2 mt-2.5 z-50 w-52 bg-[#111417] border border-[#2a343d] rounded-xl p-3.5 shadow-2xl text-center">
+                              <div class="w-2.5 h-2.5 bg-[#111417] border-l border-t border-[#2a343d] rotate-45 absolute -top-1.5 left-1/2 -translate-x-1/2"></div>
                               <div class="w-12 h-12 mx-auto mb-2 rounded-xl bg-gradient-to-br from-emerald-500/20 to-[#1b2228] border border-emerald-500/30 flex items-center justify-center text-2xl shadow-inner">
                                 {{ badge.icon }}
                               </div>
@@ -123,7 +124,6 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                               <p class="text-[11px] text-gray-400 mt-1 leading-snug">
                                 {{ badge.description }}
                               </p>
-                              <div class="w-2.5 h-2.5 bg-[#111417] border-r border-b border-[#2a343d] rotate-45 absolute -bottom-1.5 left-1/2 -translate-x-1/2"></div>
                             </div>
                           </div>
                         }

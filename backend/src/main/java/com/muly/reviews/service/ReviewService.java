@@ -91,9 +91,9 @@ public class ReviewService {
         if (raw == null) {
             throw new IllegalArgumentException("Rating is required.");
         }
-        double rounded = Math.round(raw * 2.0) / 2.0;
-        if (rounded < 0.5 || rounded > 5.0) {
-            throw new IllegalArgumentException("Rating must be between 0.5 and 5.0.");
+        double rounded = Math.round(raw * 100.0) / 100.0;
+        if (rounded < 0.01 || rounded > 5.0) {
+            throw new IllegalArgumentException("Rating must be between 0.01 and 5.0.");
         }
         return rounded;
     }
@@ -378,7 +378,7 @@ public class ReviewService {
         }
 
         return new AlbumReviewsSummaryResponse(
-                avg != null ? Math.round(avg * 10.0) / 10.0 : null,
+                avg != null ? Math.round(avg * 100.0) / 100.0 : null,
                 count,
                 dtoList,
                 trackDtoList,
@@ -580,7 +580,7 @@ public class ReviewService {
                 .thenComparing(RankedAlbumResponse::releaseYear, Comparator.nullsLast(Comparator.reverseOrder())));
 
         Double artistAvg = totalArtistReviews > 0
-                ? Math.round((ratingSum / totalArtistReviews) * 10.0) / 10.0
+                ? Math.round((ratingSum / totalArtistReviews) * 100.0) / 100.0
                 : null;
 
         String displayArtistName = cleanArtist;
@@ -642,7 +642,7 @@ public class ReviewService {
             for (double r : stats.ratings) {
                 sum += r;
             }
-            avg = Math.round((sum / total) * 10.0) / 10.0;
+            avg = Math.round((sum / total) * 100.0) / 100.0;
         }
         return new RankedAlbumResponse(
                 album.id(),
