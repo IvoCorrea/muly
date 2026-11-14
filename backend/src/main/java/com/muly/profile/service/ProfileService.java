@@ -299,8 +299,12 @@ public class ProfileService {
             return List.of();
         }
         User user = userService.getByUsername(username);
+        Set<String> reviewedAlbumIds = getReviewedAlbumExternalIds(user.getUsername());
         return listenLaterRepository.findByUserUsernameOrderByCreatedAtDesc(user.getUsername())
                 .stream()
+                .filter(item -> item.getAlbum() != null
+                        && item.getAlbum().getExternalId() != null
+                        && !reviewedAlbumIds.contains(item.getAlbum().getExternalId()))
                 .map(item -> catalogService.toResponse(item.getAlbum()))
                 .toList();
     }
@@ -311,7 +315,36 @@ public class ProfileService {
             return false;
         }
         User user = userService.getByUsername(username);
-        return listenLaterRepository.existsByUserUsernameAndAlbumExternalId(user.getUsername(), spotifyId.trim());
+        String cleanId = spotifyId.trim();
+        if (hasReviewedAlbum(user.getUsername(), cleanId)) {
+            return false;
+        }
+        return listenLaterRepository.existsByUserUsernameAndAlbumExternalId(user.getUsername(), cleanId);
+    }
+
+    private Set<String> getReviewedAlbumExternalIds(String username) {
+        Set<String> reviewedIds = new HashSet<>();
+        List<Review> albumRevs = reviewRepository.findByUserUsernameOrderByCreatedAtDesc(username);
+        if (albumRevs != null) {
+            for (Review r : albumRevs) {
+                if (r.getAlbum() != null && r.getAlbum().getExternalId() != null) {
+                    reviewedIds.add(r.getAlbum().getExternalId());
+                }
+            }
+        }
+        List<TrackReview> trackRevs = trackReviewRepository.findByUserUsernameOrderByCreatedAtDesc(username);
+        if (trackRevs != null) {
+            for (TrackReview tr : trackRevs) {
+                if (tr.getAlbum() != null && tr.getAlbum().getExternalId() != null) {
+                    reviewedIds.add(tr.getAlbum().getExternalId());
+                }
+            }
+        }
+        return reviewedIds;
+    }
+
+    private boolean hasReviewedAlbum(String username, String externalId) {
+        return getReviewedAlbumExternalIds(username).contains(externalId);
     }
 
     @Transactional

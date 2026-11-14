@@ -9,6 +9,7 @@ import com.muly.catalog.model.Album;
 import com.muly.catalog.service.CatalogService;
 import com.muly.common.exception.ResourceNotFoundException;
 import com.muly.profile.model.UserFollow;
+import com.muly.profile.repository.ListenLaterRepository;
 import com.muly.profile.repository.UserFollowRepository;
 import com.muly.reviews.dto.*;
 import com.muly.reviews.model.Review;
@@ -20,6 +21,7 @@ import com.muly.reviews.repository.ReviewLikeRepository;
 import com.muly.reviews.repository.ReviewRepository;
 import com.muly.reviews.repository.TrackReviewRepository;
 import com.muly.social.service.NotificationService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,6 +36,7 @@ public class ReviewService {
     private final ReviewLikeRepository reviewLikeRepository;
     private final ReviewCommentRepository reviewCommentRepository;
     private final UserFollowRepository userFollowRepository;
+    private final ListenLaterRepository listenLaterRepository;
     private final UserService userService;
     private final CatalogService catalogService;
     private final NotificationService notificationService;
@@ -48,11 +51,37 @@ public class ReviewService {
             CatalogService catalogService,
             NotificationService notificationService
     ) {
+        this(
+                reviewRepository,
+                trackReviewRepository,
+                reviewLikeRepository,
+                reviewCommentRepository,
+                userFollowRepository,
+                null,
+                userService,
+                catalogService,
+                notificationService
+        );
+    }
+
+    @Autowired
+    public ReviewService(
+            ReviewRepository reviewRepository,
+            TrackReviewRepository trackReviewRepository,
+            ReviewLikeRepository reviewLikeRepository,
+            ReviewCommentRepository reviewCommentRepository,
+            UserFollowRepository userFollowRepository,
+            ListenLaterRepository listenLaterRepository,
+            UserService userService,
+            CatalogService catalogService,
+            NotificationService notificationService
+    ) {
         this.reviewRepository = reviewRepository;
         this.trackReviewRepository = trackReviewRepository;
         this.reviewLikeRepository = reviewLikeRepository;
         this.reviewCommentRepository = reviewCommentRepository;
         this.userFollowRepository = userFollowRepository;
+        this.listenLaterRepository = listenLaterRepository;
         this.userService = userService;
         this.catalogService = catalogService;
         this.notificationService = notificationService;
@@ -102,6 +131,7 @@ public class ReviewService {
             }
 
             TrackReview savedTrack = trackReviewRepository.save(trackReview);
+            removeFromListenLaterIfPresent(user.getUsername(), album.getExternalId());
             return toTrackResponse(savedTrack, user.getUsername());
         }
 
@@ -122,7 +152,16 @@ public class ReviewService {
         }
 
         Review saved = reviewRepository.save(review);
+        removeFromListenLaterIfPresent(user.getUsername(), album.getExternalId());
         return toResponse(saved, user.getUsername());
+    }
+
+    private void removeFromListenLaterIfPresent(String username, String externalId) {
+        if (listenLaterRepository == null || username == null || externalId == null) {
+            return;
+        }
+        listenLaterRepository.findByUserUsernameAndAlbumExternalId(username, externalId)
+                .ifPresent(listenLaterRepository::delete);
     }
 
     @Transactional

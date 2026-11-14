@@ -24,6 +24,7 @@ import com.muly.reviews.dto.ReviewCommentResponse;
 import com.muly.reviews.dto.ReviewResponse;
 import com.muly.reviews.model.Review;
 import com.muly.reviews.model.ReviewComment;
+import com.muly.reviews.model.TrackReview;
 import com.muly.reviews.repository.ReviewCommentRepository;
 import com.muly.reviews.repository.ReviewLikeRepository;
 import com.muly.reviews.repository.ReviewRepository;
@@ -49,7 +50,9 @@ class SocialFeaturesTest {
     private User userIvo;
     private User userAna;
     private Album album1;
+    private Album album2;
     private List<Notification> savedNotifications;
+    private List<ListenLaterItem> listenLaterStore;
     private ReviewService reviewService;
     private ProfileService profileService;
 
@@ -85,6 +88,15 @@ class SocialFeaturesTest {
                 .coverUrl("https://cover1")
                 .build();
 
+        album2 = Album.builder()
+                .id(UUID.randomUUID())
+                .externalId("spotify-2")
+                .title("Kid A")
+                .artist("Radiohead")
+                .releaseYear(2000)
+                .coverUrl("https://cover2")
+                .build();
+
         savedNotifications = new ArrayList<>();
 
         NotificationRepository notificationRepository = stubInterface(NotificationRepository.class, (proxy, method, args) -> {
@@ -116,8 +128,15 @@ class SocialFeaturesTest {
         UserService userService = new UserService(userRepository);
 
         AlbumRepository albumRepository = stubInterface(AlbumRepository.class, (proxy, method, args) -> {
-            if ("findByArtistContainingIgnoreCaseOrderByReleaseYearDesc".equals(method.getName())) {
+            String m = method.getName();
+            if ("findByArtistContainingIgnoreCaseOrderByReleaseYearDesc".equals(m)) {
                 return List.of(album1);
+            }
+            if ("findByExternalId".equals(m) && args != null && args.length > 0) {
+                return "spotify-2".equals(args[0]) ? Optional.of(album2) : Optional.of(album1);
+            }
+            if ("findById".equals(m) && args != null && args.length > 0) {
+                return album2.getId().equals(args[0]) ? Optional.of(album2) : Optional.of(album1);
             }
             return Optional.of(album1);
         });
@@ -142,6 +161,7 @@ class SocialFeaturesTest {
                 .createdAt(Instant.now())
                 .build();
 
+        List<Review> dynamicReviews = new ArrayList<>();
         ReviewRepository reviewRepository = stubInterface(ReviewRepository.class, (proxy, method, args) -> {
             String m = method.getName();
             if ("findById".equals(m)) return Optional.of(reviewIvo);
@@ -149,11 +169,20 @@ class SocialFeaturesTest {
             if ("save".equals(m)) {
                 Review r = (Review) args[0];
                 if (r.getId() == null) r.setId(UUID.randomUUID());
+                if (r.getCreatedAt() == null) r.setCreatedAt(Instant.now());
+                dynamicReviews.add(r);
                 return r;
             }
             if ("findByUserUsernameOrderByCreatedAtDesc".equals(m)) {
                 String u = (String) args[0];
-                return "ivo".equalsIgnoreCase(u) ? List.of(reviewIvo) : List.of(reviewAna);
+                List<Review> result = new ArrayList<>();
+                result.add("ivo".equalsIgnoreCase(u) ? reviewIvo : reviewAna);
+                for (Review r : dynamicReviews) {
+                    if (r.getUser().getUsername().equalsIgnoreCase(u)) {
+                        result.add(r);
+                    }
+                }
+                return result;
             }
             if ("findByAlbumExternalIdOrderByCreatedAtDesc".equals(m)) {
                 return List.of(reviewIvo, reviewAna);
@@ -162,8 +191,24 @@ class SocialFeaturesTest {
             return Optional.empty();
         });
 
+        List<TrackReview> savedTrackReviews = new ArrayList<>();
         TrackReviewRepository trackReviewRepository = stubInterface(TrackReviewRepository.class, (proxy, method, args) -> {
-            if ("countByUserUsername".equals(method.getName())) return 0L;
+            String m = method.getName();
+            if ("countByUserUsername".equals(m)) return (long) savedTrackReviews.size();
+            if ("findByUserUsernameAndAlbumExternalIdAndTrackNumber".equals(m)) return Optional.empty();
+            if ("findByUserUsernameOrderByCreatedAtDesc".equals(m)) {
+                String u = (String) args[0];
+                return savedTrackReviews.stream()
+                        .filter(tr -> tr.getUser().getUsername().equalsIgnoreCase(u))
+                        .toList();
+            }
+            if ("save".equals(m)) {
+                TrackReview tr = (TrackReview) args[0];
+                if (tr.getId() == null) tr.setId(UUID.randomUUID());
+                if (tr.getCreatedAt() == null) tr.setCreatedAt(Instant.now());
+                savedTrackReviews.add(tr);
+                return tr;
+            }
             return List.of();
         });
 
@@ -196,29 +241,29 @@ class SocialFeaturesTest {
             return List.of();
         });
 
-        reviewService = new ReviewService(
-                reviewRepository,
-                trackReviewRepository,
-                reviewLikeRepository,
-                reviewCommentRepository,
-                userFollowRepository,
-                userService,
-                catalogService,
-                notificationService
-        );
-
-        TopAlbumRepository topAlbumRepository = stubInterface(TopAlbumRepository.class, (proxy, method, args) -> List.of());
-        List<ListenLaterItem> listenLaterStore = new ArrayList<>();
+        listenLaterStore = new ArrayList<>();
         ListenLaterRepository listenLaterRepository = stubInterface(ListenLaterRepository.class, (proxy, method, args) -> {
             String m = method.getName();
             if ("findByUserUsernameOrderByCreatedAtDesc".equals(m)) {
-                return new ArrayList<>(listenLaterStore);
+                String u = (String) args[0];
+                return listenLaterStore.stream()
+                        .filter(item -> item.getUser().getUsername().equalsIgnoreCase(u))
+                        .toList();
             }
             if ("findByUserUsernameAndAlbumExternalId".equals(m)) {
-                return listenLaterStore.stream().findFirst();
+                String u = (String) args[0];
+                String ext = (String) args[1];
+                return listenLaterStore.stream()
+                        .filter(item -> item.getUser().getUsername().equalsIgnoreCase(u)
+                                && item.getAlbum().getExternalId().equals(ext))
+                        .findFirst();
             }
             if ("existsByUserUsernameAndAlbumExternalId".equals(m)) {
-                return !listenLaterStore.isEmpty();
+                String u = (String) args[0];
+                String ext = (String) args[1];
+                return listenLaterStore.stream()
+                        .anyMatch(item -> item.getUser().getUsername().equalsIgnoreCase(u)
+                                && item.getAlbum().getExternalId().equals(ext));
             }
             if ("save".equals(m)) {
                 ListenLaterItem item = (ListenLaterItem) args[0];
@@ -232,6 +277,20 @@ class SocialFeaturesTest {
             }
             return 0L;
         });
+
+        reviewService = new ReviewService(
+                reviewRepository,
+                trackReviewRepository,
+                reviewLikeRepository,
+                reviewCommentRepository,
+                userFollowRepository,
+                listenLaterRepository,
+                userService,
+                catalogService,
+                notificationService
+        );
+
+        TopAlbumRepository topAlbumRepository = stubInterface(TopAlbumRepository.class, (proxy, method, args) -> List.of());
         ImageKitService imageKitService = new ImageKitService("", "", "");
 
         profileService = new ProfileService(
@@ -286,17 +345,41 @@ class SocialFeaturesTest {
 
     @Test
     void shouldToggleListenLaterAndListAlbums() {
-        boolean saved = profileService.toggleListenLater("ivo", "spotify-1");
+        boolean saved = profileService.toggleListenLater("ivo", "spotify-2");
         assertTrue(saved);
-        assertTrue(profileService.isSavedInListenLater("ivo", "spotify-1"));
+        assertTrue(profileService.isSavedInListenLater("ivo", "spotify-2"));
 
         List<AlbumResponse> items = profileService.getListenLater("ivo");
         assertEquals(1, items.size());
-        assertEquals("In Rainbows", items.get(0).title());
+        assertEquals("Kid A", items.get(0).title());
 
-        boolean removed = profileService.toggleListenLater("ivo", "spotify-1");
+        boolean removed = profileService.toggleListenLater("ivo", "spotify-2");
         assertFalse(removed);
         assertTrue(profileService.getListenLater("ivo").isEmpty());
+    }
+
+    @Test
+    void shouldRemoveAlbumFromListenLaterAutomaticallyWhenReviewed() {
+        assertTrue(profileService.toggleListenLater("ivo", "spotify-2"));
+        assertTrue(profileService.toggleListenLater("ana", "spotify-2"));
+        assertEquals(1, profileService.getListenLater("ivo").size());
+        assertEquals(1, profileService.getListenLater("ana").size());
+
+        // Avaliando uma música do álbum para "ivo" -> deve remover automaticamente da fila Quero Ouvir de "ivo"
+        reviewService.createOrUpdateReview(
+                "ivo",
+                new CreateReviewRequest("spotify-2", 1, "Everything In Its Right Place", 5.0, "Clássico!")
+        );
+        assertFalse(profileService.isSavedInListenLater("ivo", "spotify-2"));
+        assertTrue(profileService.getListenLater("ivo").isEmpty());
+
+        // Avaliando o álbum completo para "ana" -> deve remover automaticamente da fila Quero Ouvir de "ana"
+        reviewService.createOrUpdateReview(
+                "ana",
+                new CreateReviewRequest("spotify-2", null, null, 4.5, "Obra-prima")
+        );
+        assertFalse(profileService.isSavedInListenLater("ana", "spotify-2"));
+        assertTrue(profileService.getListenLater("ana").isEmpty());
     }
 
     @Test

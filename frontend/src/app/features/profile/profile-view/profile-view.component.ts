@@ -33,7 +33,7 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
       } @else if (profile) {
         
         <!-- Header do Perfil -->
-        <div class="bg-[#1b2228] border border-[#2a343d] rounded-xl p-6 sm:p-8 mb-10 shadow-lg relative overflow-hidden">
+        <div class="bg-[#1b2228] border border-[#2a343d] rounded-xl p-6 sm:p-8 mb-10 shadow-lg relative overflow-visible">
           <!-- Ícone Compartilhar Perfil no Canto Superior Direito -->
           <button
             type="button"
@@ -49,13 +49,37 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
           <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 relative z-10 pr-6 sm:pr-8">
             
             <div class="flex items-start sm:items-center gap-5">
-              <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-[#12161a] border-2 border-emerald-500 overflow-hidden flex items-center justify-center text-white font-black text-2xl uppercase shadow-md shrink-0">
-                @if (profile.avatarUrl) {
-                  <img [src]="profile.avatarUrl" [alt]="profile.username" class="w-full h-full object-cover" />
-                } @else {
-                  {{ (profile.displayName || profile.username).substring(0, 2) }}
-                }
+              <div class="flex flex-col items-center gap-2 shrink-0">
+                <div class="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-[#12161a] border-2 border-emerald-500 overflow-hidden flex items-center justify-center text-white font-black text-2xl uppercase shadow-md">
+                  @if (profile.avatarUrl) {
+                    <img [src]="profile.avatarUrl" [alt]="profile.username" class="w-full h-full object-cover" />
+                  } @else {
+                    {{ (profile.displayName || profile.username).substring(0, 2) }}
+                  }
+                </div>
+
+                <!-- Contador compacto Seguidores | Seguindo -->
+                <div class="bg-[#12161a] border border-[#242c34] rounded-full px-3 py-0.5 text-xs font-bold inline-flex items-center gap-2 shadow-sm">
+                  <button
+                    type="button"
+                    (click)="openFollowModal('followers')"
+                    class="cursor-pointer text-gray-200 hover:text-emerald-400 transition-colors"
+                    title="Seguidores"
+                  >
+                    {{ profile.followersCount || 0 }}
+                  </button>
+                  <span class="text-gray-600">|</span>
+                  <button
+                    type="button"
+                    (click)="openFollowModal('following')"
+                    class="cursor-pointer text-gray-200 hover:text-emerald-400 transition-colors"
+                    title="Seguindo"
+                  >
+                    {{ profile.followingCount || 0 }}
+                  </button>
+                </div>
               </div>
+
               <div>
                 <div class="flex flex-wrap items-center gap-2">
                   <h1 class="text-2xl sm:text-3xl font-black text-white tracking-wide">
@@ -71,92 +95,78 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                   }
                 </div>
 
-                @if (profile.bio) {
-                  <p class="text-xs sm:text-sm text-gray-300 mt-1.5 max-w-xl leading-relaxed whitespace-pre-wrap">
-                    {{ profile.bio }}
-                  </p>
-                }
+                <!-- Linha compacta de Insígnias (estilo Discord) e Links Sociais -->
+                @if (displayBadges.length > 0 || profile.spotifyProfileUrl || profile.lastfmProfileUrl) {
+                  <div class="mt-2 flex flex-wrap items-center gap-2">
+                    @if (displayBadges.length > 0) {
+                      <div class="inline-flex items-center gap-1 bg-[#12161a] border border-[#242c34] px-2 py-1 rounded-lg">
+                        @for (badge of displayBadges; track badge.id) {
+                          <div class="relative group/badge flex items-center justify-center">
+                            <span
+                              class="text-sm leading-none cursor-default select-none px-0.5 transition-transform group-hover/badge:scale-110"
+                              [attr.aria-label]="badge.label"
+                            >
+                              {{ badge.icon }}
+                            </span>
 
-                <p class="text-xs text-gray-400 mt-1.5">
-                  Membro desde {{ formatDate(profile.memberSince) }}
-                </p>
+                            <!-- Popover estilo Discord -->
+                            <div class="opacity-0 pointer-events-none group-hover/badge:opacity-100 transition-all duration-150 absolute bottom-full left-1/2 -translate-x-1/2 mb-2.5 z-50 w-52 bg-[#111417] border border-[#2a343d] rounded-xl p-3.5 shadow-2xl text-center">
+                              <div class="w-12 h-12 mx-auto mb-2 rounded-xl bg-gradient-to-br from-emerald-500/20 to-[#1b2228] border border-emerald-500/30 flex items-center justify-center text-2xl shadow-inner">
+                                {{ badge.icon }}
+                              </div>
+                              <p class="text-[10px] text-gray-400 font-medium">
+                                {{ badge.id === 'pioneer' ? 'Membro desde ' + formatDate(profile.memberSince) : 'Insígnia Muly' }}
+                              </p>
+                              <p class="text-xs font-black uppercase tracking-wider text-white mt-0.5">
+                                {{ badge.label }}
+                              </p>
+                              <p class="text-[11px] text-gray-400 mt-1 leading-snug">
+                                {{ badge.description }}
+                              </p>
+                              <div class="w-2.5 h-2.5 bg-[#111417] border-r border-b border-[#2a343d] rotate-45 absolute -bottom-1.5 left-1/2 -translate-x-1/2"></div>
+                            </div>
+                          </div>
+                        }
+                      </div>
+                    }
 
-                <!-- Pílulas de Estatísticas e Seguidores -->
-                <div class="mt-3 flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    (click)="openFollowModal('followers')"
-                    class="cursor-pointer inline-flex items-center gap-1.5 bg-[#12161a] hover:bg-[#222b33] px-3 py-1 rounded-full text-xs font-semibold text-emerald-400 border border-[#242c34] hover:border-emerald-500/40 transition-colors"
-                  >
-                    <span>{{ profile.followersCount || 0 }}</span>
-                    <span class="text-gray-400 font-normal">{{ (profile.followersCount || 0) === 1 ? 'seguidor' : 'seguidores' }}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    (click)="openFollowModal('following')"
-                    class="cursor-pointer inline-flex items-center gap-1.5 bg-[#12161a] hover:bg-[#222b33] px-3 py-1 rounded-full text-xs font-semibold text-emerald-400 border border-[#242c34] hover:border-emerald-500/40 transition-colors"
-                  >
-                    <span>{{ profile.followingCount || 0 }}</span>
-                    <span class="text-gray-400 font-normal">seguindo</span>
-                  </button>
-
-                  <div class="inline-flex items-center gap-1.5 bg-[#12161a] px-3 py-1 rounded-full text-xs font-semibold text-emerald-400 border border-[#242c34]">
-                    <span>{{ profile.totalReviews }}</span>
-                    <span class="text-gray-400 font-normal">{{ profile.totalReviews === 1 ? 'avaliação' : 'avaliações' }}</span>
-                  </div>
-
-                  <div class="inline-flex items-center gap-1.5 bg-[#12161a] px-3 py-1 rounded-full text-xs font-semibold text-emerald-400 border border-[#242c34]">
-                    <span>{{ userLists.length }}</span>
-                    <span class="text-gray-400 font-normal">{{ userLists.length === 1 ? 'lista' : 'listas' }}</span>
-                  </div>
-
-                  @if (profile.spotifyProfileUrl) {
-                    <a
-                      [href]="profile.spotifyProfileUrl"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="inline-flex items-center gap-1.5 bg-[#1DB954]/15 hover:bg-[#1DB954] text-[#1DB954] hover:text-black border border-[#1DB954]/30 px-3 py-1 rounded-full text-xs font-bold transition-colors"
-                      title="Perfil no Spotify"
-                    >
-                      <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
-                      </svg>
-                      <span>Spotify</span>
-                    </a>
-                  }
-
-                  @if (profile.lastfmProfileUrl) {
-                    <a
-                      [href]="profile.lastfmProfileUrl"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="inline-flex items-center gap-1.5 bg-red-500/15 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/30 px-3 py-1 rounded-full text-xs font-bold transition-colors"
-                      title="Perfil no Last.fm"
-                    >
-                      <span class="font-black text-[10px] leading-none">last.fm</span>
-                    </a>
-                  }
-                </div>
-
-                <!-- Selos / Conquistas Colecionáveis -->
-                @if (displayBadges.length > 0) {
-                  <div class="mt-3 flex flex-wrap items-center gap-1.5">
-                    @for (badge of displayBadges; track badge.id) {
-                      <span
-                        class="inline-flex items-center gap-1 bg-emerald-500/10 border border-emerald-500/25 text-emerald-300 px-2.5 py-0.5 rounded-full text-[11px] font-bold"
-                        [title]="badge.description"
+                    @if (profile.spotifyProfileUrl) {
+                      <a
+                        [href]="profile.spotifyProfileUrl"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="w-7 h-7 rounded-lg bg-[#12161a] hover:bg-[#1DB954]/20 text-[#1DB954] border border-[#242c34] hover:border-[#1DB954]/50 inline-flex items-center justify-center transition-colors"
+                        title="Perfil no Spotify"
                       >
-                        <span>{{ badge.icon }}</span>
-                        <span>{{ badge.label }}</span>
-                      </span>
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
+                        </svg>
+                      </a>
+                    }
+
+                    @if (profile.lastfmProfileUrl) {
+                      <a
+                        [href]="profile.lastfmProfileUrl"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="h-7 px-2 rounded-lg bg-[#12161a] hover:bg-red-500/20 text-red-400 border border-[#242c34] hover:border-red-500/50 inline-flex items-center justify-center transition-colors"
+                        title="Perfil no Last.fm"
+                      >
+                        <span class="font-black text-[10px] leading-none">last.fm</span>
+                      </a>
                     }
                   </div>
+                }
+
+                @if (profile.bio) {
+                  <p class="text-xs sm:text-sm text-gray-300 mt-2.5 max-w-xl leading-relaxed whitespace-pre-wrap">
+                    {{ profile.bio }}
+                  </p>
                 }
               </div>
             </div>
 
-            <!-- Botão de Ação (Customizar Perfil ou Seguir/Seguindo + Collage Stories) -->
+            <!-- Botão de Ação (Customizar Perfil ou Seguir/Seguindo) -->
             <div class="flex flex-col items-stretch sm:items-end gap-2.5 shrink-0">
               @if (isOwnProfile) {
                 <a
@@ -178,15 +188,6 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                   {{ profile.followedByMe ? '✓ Seguindo' : '+ Seguir' }}
                 </button>
               }
-              <button
-                type="button"
-                (click)="openCollageShareModal()"
-                class="cursor-pointer inline-flex items-center justify-center gap-1.5 bg-[#12161a] hover:bg-[#242c34] text-emerald-400 border border-emerald-500/35 font-bold text-[11px] uppercase tracking-wider px-4 py-2 rounded-lg transition-colors shadow-sm"
-                title="Gerar Collage 3x3 e card formato Stories (9:16)"
-              >
-                <span>📸</span>
-                <span>Collage / Stories</span>
-              </button>
             </div>
           </div>
 
@@ -252,7 +253,7 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
             @if (profile.favoriteAlbum) {
               <div class="flex flex-col min-w-0">
                 <h2 class="text-xs font-black uppercase tracking-widest text-emerald-400 mb-3 flex items-center gap-2">
-                  <span>★</span> Álbum Favorito de Todos os Tempos
+                  <span>★</span> Álbum Favorito
                 </h2>
                 <div class="flex-1 min-w-0 overflow-hidden bg-gradient-to-r from-[#1c2228] to-[#14181c] border border-emerald-500/30 rounded-xl p-6 flex flex-col sm:flex-row items-center gap-6 shadow-xl">
                   <div class="w-32 h-32 rounded-lg overflow-hidden shadow-2xl shrink-0 border border-[#2a343d]">
@@ -306,7 +307,7 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
             @if (profile.currentTrack) {
               <div class="flex flex-col min-w-0">
                 <h2 class="text-xs font-black uppercase tracking-widest text-emerald-400 mb-3 flex items-center gap-2">
-                  <span>🎧</span> Música que mais está gostando atualmente
+                  <span>🎧</span> Música do Momento
                 </h2>
                 <div class="flex-1 min-w-0 overflow-hidden bg-gradient-to-r from-[#1c2228] to-[#14181c] border border-emerald-500/30 rounded-xl p-6 flex flex-col sm:flex-row items-center gap-6 shadow-xl">
                   <div class="w-32 h-32 rounded-lg overflow-hidden shadow-2xl shrink-0 border border-[#2a343d] bg-[#12161a] relative group">
@@ -435,7 +436,7 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
         </div>
 
         <!-- Seção: Quero Ouvir (Listen Later) -->
-        @if (listenLaterAlbums.length > 0 || isOwnProfile) {
+        @if (listenLaterAlbums.length > 0) {
           <div class="mb-12">
             <div class="flex items-center justify-between mb-4">
               <h2 class="text-xs font-black uppercase tracking-widest text-gray-300 flex items-center gap-2">
@@ -447,29 +448,11 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
               </a>
             </div>
 
-            @if (listenLaterAlbums.length > 0) {
-              <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-4">
-                @for (album of listenLaterAlbums; track album.externalId) {
-                  <div class="relative group/ll">
-                    <app-album-card [album]="album" [showSpotifyLink]="true" />
-                    @if (isOwnProfile) {
-                      <button
-                        type="button"
-                        (click)="removeFromListenLater(album, $event)"
-                        class="cursor-pointer absolute top-2 right-2 z-10 w-6 h-6 rounded-full bg-black/75 hover:bg-red-500 text-white text-[10px] font-bold flex items-center justify-center opacity-90 sm:opacity-0 sm:group-hover/ll:opacity-100 transition-all shadow"
-                        title="Remover da fila Quero Ouvir"
-                      >
-                        ✕
-                      </button>
-                    }
-                  </div>
-                }
-              </div>
-            } @else {
-              <div class="p-6 border border-dashed border-[#2a343d] rounded-lg text-center text-xs text-gray-500">
-                Sua fila "Quero Ouvir" está vazia. Abra qualquer álbum no catálogo e clique em <strong class="text-emerald-400">🔖 Quero Ouvir</strong> para salvar aqui!
-              </div>
-            }
+            <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-4">
+              @for (album of listenLaterAlbums; track album.externalId) {
+                <app-album-card [album]="album" [showSpotifyLink]="true" />
+              }
+            </div>
           </div>
         }
 
@@ -477,7 +460,7 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
         <div class="mb-12">
           <div class="flex items-center justify-between mb-4">
             <h2 class="text-xs font-black uppercase tracking-widest text-gray-300">
-              Listas de Álbuns de {{ profile.username }} ({{ userLists.length }})
+              Listas ({{ userLists.length }})
             </h2>
             @if (isOwnProfile) {
               <a
@@ -540,7 +523,7 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
         <!-- Seção: Resenhas e Avaliações do Usuário -->
         <div>
           <h2 class="text-xs font-black uppercase tracking-widest text-gray-300 mb-4">
-            Resenhas & Notas de {{ profile.username }} ({{ userReviews.length }})
+            Avaliações ({{ userReviews.length }})
           </h2>
 
           @if (userReviews.length > 0) {
@@ -982,18 +965,6 @@ export class ProfileViewComponent implements OnInit, OnDestroy {
     });
   }
 
-  removeFromListenLater(album: AlbumResponse, event?: Event): void {
-    event?.stopPropagation();
-    event?.preventDefault();
-    this.profileService.toggleListenLater(album.externalId).subscribe({
-      next: (res) => {
-        if (!res?.saved) {
-          this.listenLaterAlbums = this.listenLaterAlbums.filter(a => a.externalId !== album.externalId);
-        }
-      }
-    });
-  }
-
   loadReviews(username: string): void {
     this.reviewsService.getReviewsByUser(username).subscribe({
       next: (reviews) => {
@@ -1018,10 +989,6 @@ export class ProfileViewComponent implements OnInit, OnDestroy {
 
   shareProfile(): void {
     this.openProfileShareModal('post', 'highlights');
-  }
-
-  openCollageShareModal(): void {
-    this.openProfileShareModal('stories', 'collage');
   }
 
   private buildCollageItems(): CollageItemData[] {

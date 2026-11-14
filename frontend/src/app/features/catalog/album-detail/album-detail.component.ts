@@ -64,18 +64,20 @@ import { StarRatingComponent } from '../../../shared/components/star-rating/star
                   </svg>
                   <span>Ouvir no Spotify</span>
                 </a>
-                <button
-                  type="button"
-                  (click)="toggleListenLater()"
-                  [disabled]="togglingListenLater"
-                  class="cursor-pointer disabled:opacity-50 inline-flex items-center gap-1.5 font-bold text-[11px] uppercase tracking-wider px-3 py-1 rounded-full transition-colors border shadow"
-                  [ngClass]="savedInListenLater
-                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50 hover:bg-emerald-500/30'
-                    : 'bg-[#1c2228] text-gray-200 border-[#2a343d] hover:border-emerald-500/50 hover:text-emerald-400'"
-                  title="Salvar na fila Quero Ouvir"
-                >
-                  <span>{{ savedInListenLater ? '✓ Na fila Quero Ouvir' : '🔖 Quero Ouvir' }}</span>
-                </button>
+                @if (!myReview && myTrackReviews.length === 0) {
+                  <button
+                    type="button"
+                    (click)="toggleListenLater()"
+                    [disabled]="togglingListenLater"
+                    class="cursor-pointer disabled:opacity-50 inline-flex items-center gap-1.5 font-bold text-[11px] uppercase tracking-wider px-3 py-1 rounded-full transition-colors border shadow"
+                    [ngClass]="savedInListenLater
+                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50 hover:bg-emerald-500/30'
+                      : 'bg-[#1c2228] text-gray-200 border-[#2a343d] hover:border-emerald-500/50 hover:text-emerald-400'"
+                    title="Salvar na fila Quero Ouvir"
+                  >
+                    <span>{{ savedInListenLater ? '✓ Na fila Quero Ouvir' : '🔖 Quero Ouvir' }}</span>
+                  </button>
+                }
               </div>
 
               <h1 class="text-3xl sm:text-4xl font-black text-white mt-2 tracking-tight">
@@ -882,6 +884,7 @@ export class AlbumDetailComponent implements OnInit {
         } else {
           this.myReview = saved;
         }
+        this.savedInListenLater = false;
         this.savingReview = false;
         if (this.album) {
           this.loadReviews(this.album.externalId);
