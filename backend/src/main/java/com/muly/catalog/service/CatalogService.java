@@ -122,6 +122,10 @@ public class CatalogService {
                 .toList();
     }
 
+    public SpotifyService.ArtistSpotifyInfo getArtistSpotifyInfo(String artistName) {
+        return spotifyService.searchArtistInfo(artistName);
+    }
+
     public AlbumResponse toResponse(Album album) {
         return new AlbumResponse(
                 album.getId(),

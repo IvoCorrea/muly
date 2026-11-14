@@ -301,4 +301,41 @@ public class SpotifyService {
 
         return fallbackUrl;
     }
+
+    public record ArtistSpotifyInfo(String imageUrl, String spotifyUrl) {}
+
+    public ArtistSpotifyInfo searchArtistInfo(String artistName) {
+        String clean = artistName != null ? artistName.trim() : "";
+        String fallbackUrl = clean.isBlank()
+                ? "https://open.spotify.com"
+                : "https://open.spotify.com/search/" + URLEncoder.encode(clean, StandardCharsets.UTF_8).replace("+", "%20");
+
+        String token = getAccessToken();
+        if (token == null || clean.isBlank()) {
+            return new ArtistSpotifyInfo(null, fallbackUrl);
+        }
+
+        try {
+            String responseBody = restClient.get()
+                    .uri("https://api.spotify.com/v1/search?q={query}&type=artist&limit=1", clean)
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                    .retrieve()
+                    .body(String.class);
+
+            JsonNode root = objectMapper.readTree(responseBody);
+            JsonNode items = root.path("artists").path("items");
+            if (items.isArray() && !items.isEmpty()) {
+                JsonNode artist = items.get(0);
+                String imageUrl = extractCoverUrl(artist.path("images"));
+                String spotifyUrl = artist.path("external_urls").path("spotify").asText(null);
+                if (spotifyUrl == null || spotifyUrl.isBlank()) {
+                    spotifyUrl = fallbackUrl;
+                }
+                return new ArtistSpotifyInfo(imageUrl, spotifyUrl);
+            }
+        } catch (Exception ignored) {
+        }
+
+        return new ArtistSpotifyInfo(null, fallbackUrl);
+    }
 }

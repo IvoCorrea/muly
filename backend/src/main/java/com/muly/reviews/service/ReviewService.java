@@ -591,12 +591,16 @@ public class ReviewService {
             }
         }
 
+        com.muly.catalog.service.SpotifyService.ArtistSpotifyInfo artistInfo = catalogService.getArtistSpotifyInfo(displayArtistName);
+
         return new ArtistDetailResponse(
                 displayArtistName,
                 rankedList.size(),
                 totalArtistReviews,
                 artistAvg,
-                rankedList
+                rankedList,
+                artistInfo.imageUrl(),
+                artistInfo.spotifyUrl()
         );
     }
 

@@ -49,4 +49,6 @@ export interface ArtistDetailResponse {
   totalReviews: number;
   averageRating: number | null;
   albums: RankedAlbumResponse[];
+  artistImageUrl?: string | null;
+  spotifyArtistUrl?: string | null;
 }
