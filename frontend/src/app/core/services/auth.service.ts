@@ -131,6 +131,12 @@ export class AuthService {
     );
   }
 
+  public changeUsername(username: string): Observable<AuthResponse> {
+    return this.http.put<AuthResponse>(`${environment.apiUrl}/auth/username`, { username }).pipe(
+      tap(res => this.handleAuthSuccess(res))
+    );
+  }
+
   public consumePendingOAuth(): { provider: OAuthProvider; state: string; returnUrl: string } | null {
     const raw = sessionStorage.getItem('muly_oauth_pending');
     sessionStorage.removeItem('muly_oauth_pending');

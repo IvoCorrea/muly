@@ -1,6 +1,7 @@
 package com.muly.auth.service;
 
 import com.muly.auth.dto.AuthResponse;
+import com.muly.auth.dto.ChangeUsernameRequest;
 import com.muly.auth.dto.LoginRequest;
 import com.muly.auth.dto.RegisterRequest;
 import com.muly.auth.model.User;
@@ -9,6 +10,7 @@ import com.muly.auth.security.JwtService;
 import com.muly.common.exception.DuplicateResourceException;
 import com.muly.common.exception.InvalidCredentialsException;
 import com.muly.common.exception.ReservedUsernameException;
+import com.muly.common.exception.ResourceNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -127,6 +129,33 @@ public class AuthService {
                     .build();
             user = userRepository.save(newUser);
         }
+
+        String token = jwtService.generateToken(user.getUsername());
+        return new AuthResponse(token, user.getUsername());
+    }
+
+    @Transactional
+    public AuthResponse changeUsername(String currentUsername, ChangeUsernameRequest request) {
+        User user = userRepository.findByUsername(currentUsername)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found."));
+
+        String newUsername = request.username().trim().toLowerCase(Locale.ROOT);
+
+        if (RESERVED_USERNAMES.contains(newUsername)) {
+            throw new ReservedUsernameException("Username '" + newUsername + "' is reserved.");
+        }
+
+        if (newUsername.equals(user.getUsername())) {
+            String token = jwtService.generateToken(user.getUsername());
+            return new AuthResponse(token, user.getUsername());
+        }
+
+        if (userRepository.existsByUsername(newUsername)) {
+            throw new DuplicateResourceException("Username is already taken.");
+        }
+
+        user.setUsername(newUsername);
+        user = userRepository.save(user);
 
         String token = jwtService.generateToken(user.getUsername());
         return new AuthResponse(token, user.getUsername());

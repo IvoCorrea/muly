@@ -1,12 +1,15 @@
 package com.muly.auth;
 
 import com.muly.auth.dto.AuthResponse;
+import com.muly.auth.dto.ChangeUsernameRequest;
 import com.muly.auth.dto.OAuth2UrlResponse;
 import com.muly.auth.model.User;
 import com.muly.auth.repository.UserRepository;
 import com.muly.auth.security.JwtService;
 import com.muly.auth.service.AuthService;
 import com.muly.auth.service.OAuth2Service;
+import com.muly.common.exception.DuplicateResourceException;
+import com.muly.common.exception.ReservedUsernameException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -175,5 +178,44 @@ class OAuth2AuthTest {
         assertEquals("ivo", jwtService.extractUsername(response.token()));
         assertEquals("Ivo Custom", existing.getDisplayName());
         assertEquals("https://existing-avatar.png", existing.getAvatarUrl());
+    }
+
+    @Test
+    void changeUsernameUpdatesHandleAndIssuesNewJwt() {
+        User existing = User.builder()
+                .id(UUID.randomUUID())
+                .username("ivo_old")
+                .email("ivo@muly.com")
+                .passwordHash("hash")
+                .build();
+        userStore.add(existing);
+
+        AuthResponse updated = authService.changeUsername("ivo_old", new ChangeUsernameRequest("  Ivo_New  "));
+
+        assertEquals("ivo_new", updated.username());
+        assertEquals("ivo_new", existing.getUsername());
+        assertEquals("ivo_new", jwtService.extractUsername(updated.token()));
+    }
+
+    @Test
+    void changeUsernameRejectsReservedOrDuplicate() {
+        userStore.add(User.builder()
+                .id(UUID.randomUUID())
+                .username("ivo")
+                .email("ivo@muly.com")
+                .passwordHash("hash")
+                .build());
+        userStore.add(User.builder()
+                .id(UUID.randomUUID())
+                .username("ana")
+                .email("ana@muly.com")
+                .passwordHash("hash")
+                .build());
+
+        assertThrows(DuplicateResourceException.class, () ->
+                authService.changeUsername("ivo", new ChangeUsernameRequest("ana")));
+
+        assertThrows(ReservedUsernameException.class, () ->
+                authService.changeUsername("ivo", new ChangeUsernameRequest("me")));
     }
 }

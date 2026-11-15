@@ -195,9 +195,13 @@ import { NotificationsService } from '../../../core/services/notifications.servi
             </div>
 
             <div class="flex items-center gap-3">
-              <span class="text-xs font-medium text-gray-400 hidden lg:inline">
-                Olá, <strong class="text-emerald-400 font-semibold">{{ authService.currentUser() }}</strong>
-              </span>
+              <a
+                [routerLink]="['/profile', authService.currentUser()]"
+                class="text-xs font-medium text-gray-400 hover:text-white transition-colors hidden lg:inline-flex items-center gap-1 cursor-pointer"
+                title="Ir para o meu perfil"
+              >
+                Olá, <strong class="text-emerald-400 hover:underline font-semibold">{{ authService.currentUser() }}</strong>
+              </a>
               <button
                 type="button"
                 (click)="logout()"

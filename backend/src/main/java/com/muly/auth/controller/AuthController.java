@@ -1,6 +1,7 @@
 package com.muly.auth.controller;
 
 import com.muly.auth.dto.AuthResponse;
+import com.muly.auth.dto.ChangeUsernameRequest;
 import com.muly.auth.dto.LoginRequest;
 import com.muly.auth.dto.OAuth2CallbackRequest;
 import com.muly.auth.dto.OAuth2UrlResponse;
@@ -12,10 +13,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.security.Principal;
 
 @RestController
 @RequestMapping("/auth")
@@ -53,6 +57,15 @@ public class AuthController {
     @PostMapping("/oauth2/callback")
     public ResponseEntity<AuthResponse> oauth2Callback(@Valid @RequestBody OAuth2CallbackRequest request) {
         AuthResponse response = oAuth2Service.authenticateWithCode(request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/username")
+    public ResponseEntity<AuthResponse> changeUsername(
+            @Valid @RequestBody ChangeUsernameRequest request,
+            Principal principal
+    ) {
+        AuthResponse response = authService.changeUsername(principal.getName(), request);
         return ResponseEntity.ok(response);
     }
 }

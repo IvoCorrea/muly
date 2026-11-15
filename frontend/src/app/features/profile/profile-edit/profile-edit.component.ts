@@ -133,6 +133,42 @@ interface TopSlot {
             </div>
           </div>
 
+          <!-- Nome de Usuário (@) -->
+          <div class="mb-5 pb-5 border-b border-[#242c34]">
+            <label class="block text-xs font-semibold text-gray-300 uppercase tracking-wider mb-1.5">
+              Nome de Usuário (&#64;)
+            </label>
+            <div class="flex flex-col sm:flex-row gap-2.5 sm:items-center">
+              <div class="relative flex-1 max-w-sm">
+                <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-400">&#64;</span>
+                <input
+                  type="text"
+                  [(ngModel)]="usernameInput"
+                  maxlength="30"
+                  placeholder="seu_usuario"
+                  class="w-full bg-[#12161a] border border-[#242c34] rounded-lg pl-8 pr-3.5 py-2 text-xs text-gray-100 placeholder-gray-500 focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+              <button
+                type="button"
+                (click)="saveUsernameOnly()"
+                [disabled]="changingUsername || saving || isUsernameUnchanged()"
+                class="cursor-pointer px-4 py-2 rounded-lg bg-[#242c34] hover:bg-emerald-500 hover:text-black text-gray-200 text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+              >
+                {{ changingUsername ? 'Salvando...' : 'Alterar @usuário' }}
+              </button>
+            </div>
+            <span class="text-[10px] text-gray-500 mt-1.5 block">
+              De 1 a 30 caracteres: letras, números, <code class="text-gray-400">.</code> e <code class="text-gray-400">_</code>. Seu link ficará <strong class="text-gray-400">/profile/{{ normalizedUsernamePreview() }}</strong>
+            </span>
+            @if (usernameError) {
+              <p class="text-xs text-red-400 mt-1.5">{{ usernameError }}</p>
+            }
+            @if (usernameSuccess) {
+              <p class="text-xs text-emerald-400 mt-1.5">{{ usernameSuccess }}</p>
+            }
+          </div>
+
           <!-- Nome de Exibição & Bio -->
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             <div>
@@ -146,9 +182,6 @@ interface TopSlot {
                 placeholder="Ex: {{ currentUsername }}"
                 class="w-full bg-[#12161a] border border-[#242c34] rounded-lg px-3.5 py-2 text-xs text-gray-100 placeholder-gray-500 focus:outline-none focus:border-emerald-500"
               />
-              <span class="text-[10px] text-gray-500 mt-1 block">
-                Seu identificador único continua sendo <strong class="text-gray-400">&#64;{{ currentUsername }}</strong>
-              </span>
             </div>
 
             <div>
@@ -603,6 +636,10 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
   @ViewChild('slotSearchContainer') slotSearchContainer?: ElementRef<HTMLElement>;
 
   currentUsername = this.authService.currentUser() || '';
+  usernameInput = this.currentUsername;
+  changingUsername = false;
+  usernameSuccess = '';
+  usernameError = '';
   displayName = '';
   bio = '';
   avatarUrl: string | null = null;
@@ -745,6 +782,7 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
 
   private applyProfileData(profile: UserProfileResponse): void {
     this.currentUsername = profile.username || this.currentUsername;
+    this.usernameInput = this.currentUsername;
     this.displayName = profile.displayName || '';
     this.bio = profile.bio || '';
     this.avatarUrl = profile.avatarUrl || null;
@@ -1057,7 +1095,111 @@ export class ProfileEditComponent implements OnInit, OnDestroy {
     this.saving = true;
     this.successMessage = '';
     this.errorMessage = '';
+    this.usernameSuccess = '';
+    this.usernameError = '';
 
+    const normalizedUsername = this.normalizeUsernameInput();
+    if (normalizedUsername !== this.currentUsername) {
+      const validationError = this.validateUsername(normalizedUsername);
+      if (validationError) {
+        this.saving = false;
+        this.usernameError = validationError;
+        this.errorMessage = validationError;
+        return;
+      }
+
+      this.authService.changeUsername(normalizedUsername).subscribe({
+        next: (res) => {
+          this.currentUsername = res.username;
+          this.usernameInput = res.username;
+          this.saveProfileDetails();
+        },
+        error: (err) => {
+          this.saving = false;
+          if (err.status === 401 || err.status === 403) {
+            this.authService.handleSessionExpired('/profile/me/edit');
+            return;
+          }
+          const msg = this.mapUsernameError(err);
+          this.usernameError = msg;
+          this.errorMessage = msg;
+        }
+      });
+      return;
+    }
+
+    this.saveProfileDetails();
+  }
+
+  isUsernameUnchanged(): boolean {
+    return this.normalizeUsernameInput() === this.currentUsername;
+  }
+
+  normalizedUsernamePreview(): string {
+    return this.normalizeUsernameInput() || this.currentUsername;
+  }
+
+  saveUsernameOnly(): void {
+    this.usernameSuccess = '';
+    this.usernameError = '';
+
+    const normalized = this.normalizeUsernameInput();
+    if (normalized === this.currentUsername) {
+      return;
+    }
+
+    const validationError = this.validateUsername(normalized);
+    if (validationError) {
+      this.usernameError = validationError;
+      return;
+    }
+
+    this.changingUsername = true;
+    this.authService.changeUsername(normalized).subscribe({
+      next: (res) => {
+        this.changingUsername = false;
+        this.currentUsername = res.username;
+        this.usernameInput = res.username;
+        this.usernameSuccess = `Nome de usuário atualizado para @${res.username}!`;
+      },
+      error: (err) => {
+        this.changingUsername = false;
+        if (err.status === 401 || err.status === 403) {
+          this.authService.handleSessionExpired('/profile/me/edit');
+          return;
+        }
+        this.usernameError = this.mapUsernameError(err);
+      }
+    });
+  }
+
+  private normalizeUsernameInput(): string {
+    return this.usernameInput.trim().toLowerCase();
+  }
+
+  private validateUsername(value: string): string | null {
+    const pattern = /^(?!\.)(?!.*\.$)(?!.*\.\.)[a-z0-9._]{1,30}$/;
+    if (!pattern.test(value)) {
+      return 'Use de 1 a 30 caracteres (letras, números, "." e "_", sem pontos no início, fim ou repetidos).';
+    }
+    if (value === 'me') {
+      return 'Este nome de usuário é reservado.';
+    }
+    return null;
+  }
+
+  private mapUsernameError(err: any): string {
+    const raw: string = err?.error?.message || '';
+    if (err?.status === 409 || raw.toLowerCase().includes('taken')) {
+      return 'Este nome de usuário já está em uso.';
+    }
+    if (raw.toLowerCase().includes('reserved')) {
+      return 'Este nome de usuário é reservado.';
+    }
+    return raw || 'Erro ao alterar o nome de usuário.';
+  }
+
+  private saveProfileDetails(): void {
     const favSpotifyId = this.favoriteAlbum ? this.favoriteAlbum.externalId : null;
     const trackPayload = this.currentTrack
       ? {
