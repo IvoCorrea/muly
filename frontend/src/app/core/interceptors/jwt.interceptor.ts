@@ -19,7 +19,9 @@ export const jwtInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(req).pipe(
     catchError((error: HttpErrorResponse) => {
-      const isAuthEndpoint = req.url.includes('/auth/login') || req.url.includes('/auth/register');
+      const isAuthEndpoint = req.url.includes('/auth/login')
+        || req.url.includes('/auth/register')
+        || req.url.includes('/auth/oauth2');
       if (error.status === 401 && !isAuthEndpoint) {
         authService.handleSessionExpired(router.url);
       }

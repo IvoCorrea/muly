@@ -1,9 +1,16 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { AuthResponse, LoginRequest, RegisterRequest } from '../models/auth.models';
+import {
+  AuthResponse,
+  LoginRequest,
+  OAuth2CallbackRequest,
+  OAuth2UrlResponse,
+  OAuthProvider,
+  RegisterRequest
+} from '../models/auth.models';
 
 @Injectable({
   providedIn: 'root'
@@ -96,6 +103,60 @@ export class AuthService {
     return this.http.post<AuthResponse>(`${environment.apiUrl}/auth/register`, request).pipe(
       tap(res => this.handleAuthSuccess(res))
     );
+  }
+
+  public getOAuth2Url(provider: OAuthProvider, redirectUri: string, state: string): Observable<OAuth2UrlResponse> {
+    const params = new HttpParams()
+      .set('provider', provider)
+      .set('redirectUri', redirectUri)
+      .set('state', state);
+    return this.http.get<OAuth2UrlResponse>(`${environment.apiUrl}/auth/oauth2/url`, { params });
+  }
+
+  public startOAuth2Flow(provider: OAuthProvider, returnUrl = '/'): Observable<OAuth2UrlResponse> {
+    const state = this.generateOAuthState();
+    const redirectUri = `${window.location.origin}/oauth/callback`;
+    sessionStorage.setItem('muly_oauth_pending', JSON.stringify({ provider, state, returnUrl }));
+
+    return this.getOAuth2Url(provider, redirectUri, state).pipe(
+      tap(res => {
+        window.location.assign(res.url);
+      })
+    );
+  }
+
+  public completeOAuth2Login(request: OAuth2CallbackRequest): Observable<AuthResponse> {
+    return this.http.post<AuthResponse>(`${environment.apiUrl}/auth/oauth2/callback`, request).pipe(
+      tap(res => this.handleAuthSuccess(res))
+    );
+  }
+
+  public consumePendingOAuth(): { provider: OAuthProvider; state: string; returnUrl: string } | null {
+    const raw = sessionStorage.getItem('muly_oauth_pending');
+    sessionStorage.removeItem('muly_oauth_pending');
+    if (!raw) {
+      return null;
+    }
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed?.provider === 'google' || parsed?.provider === 'discord') {
+        return {
+          provider: parsed.provider,
+          state: typeof parsed.state === 'string' ? parsed.state : '',
+          returnUrl: typeof parsed.returnUrl === 'string' && parsed.returnUrl.startsWith('/') ? parsed.returnUrl : '/'
+        };
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  private generateOAuthState(): string {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID();
+    }
+    return Math.random().toString(36).slice(2) + Date.now().toString(36);
   }
 
   public logout(): void {

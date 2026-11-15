@@ -13,8 +13,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.text.Normalizer;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 
 @Service
 public class AuthService {
@@ -75,5 +78,118 @@ public class AuthService {
         String token = jwtService.generateToken(user.getUsername());
 
         return new AuthResponse(token, user.getUsername());
+    }
+
+    @Transactional
+    public AuthResponse loginOrRegisterOAuthUser(
+            String email,
+            String displayName,
+            String avatarUrl,
+            String preferredUsername
+    ) {
+        if (email == null || email.isBlank()) {
+            throw new IllegalArgumentException("OAuth2 provider did not return an email address.");
+        }
+
+        String normalizedEmail = email.trim().toLowerCase(Locale.ROOT);
+        Optional<User> existingUser = userRepository.findByEmail(normalizedEmail);
+
+        User user;
+        if (existingUser.isPresent()) {
+            user = existingUser.get();
+            boolean changed = false;
+            if ((user.getDisplayName() == null || user.getDisplayName().isBlank())
+                    && displayName != null && !displayName.isBlank()) {
+                user.setDisplayName(truncate(displayName.trim(), 60));
+                changed = true;
+            }
+            if ((user.getAvatarUrl() == null || user.getAvatarUrl().isBlank())
+                    && isValidAvatarUrl(avatarUrl)) {
+                user.setAvatarUrl(avatarUrl.trim());
+                changed = true;
+            }
+            if (changed) {
+                user = userRepository.save(user);
+            }
+        } else {
+            String username = generateAvailableUsername(preferredUsername, normalizedEmail);
+            String cleanDisplayName = (displayName != null && !displayName.isBlank())
+                    ? truncate(displayName.trim(), 60)
+                    : username;
+            String cleanAvatarUrl = isValidAvatarUrl(avatarUrl) ? avatarUrl.trim() : null;
+
+            User newUser = User.builder()
+                    .username(username)
+                    .email(normalizedEmail)
+                    .passwordHash(passwordEncoder.encode(UUID.randomUUID().toString()))
+                    .displayName(cleanDisplayName)
+                    .avatarUrl(cleanAvatarUrl)
+                    .build();
+            user = userRepository.save(newUser);
+        }
+
+        String token = jwtService.generateToken(user.getUsername());
+        return new AuthResponse(token, user.getUsername());
+    }
+
+    String generateAvailableUsername(String preferredUsername, String email) {
+        String rawSeed = (preferredUsername != null && !preferredUsername.isBlank())
+                ? preferredUsername
+                : email.split("@", 2)[0];
+
+        String normalized = Normalizer.normalize(rawSeed, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "")
+                .toLowerCase(Locale.ROOT)
+                .replaceAll("[^a-z0-9._]+", "_")
+                .replaceAll("\\.{2,}", ".");
+
+        normalized = trimBoundaryPeriods(normalized);
+        if (normalized.isEmpty()) {
+            normalized = "user";
+        }
+
+        String base = truncate(normalized, 30);
+        base = trimBoundaryPeriods(base);
+        if (base.isEmpty()) {
+            base = "user";
+        }
+
+        if (!RESERVED_USERNAMES.contains(base) && !userRepository.existsByUsername(base)) {
+            return base;
+        }
+
+        for (int i = 1; i < 1000; i++) {
+            String suffix = "_" + i;
+            int maxBaseLen = Math.max(1, 30 - suffix.length());
+            String slicedBase = trimBoundaryPeriods(truncate(base, maxBaseLen));
+            if (slicedBase.isEmpty()) {
+                slicedBase = "user";
+            }
+            String candidate = slicedBase + suffix;
+            if (!RESERVED_USERNAMES.contains(candidate) && !userRepository.existsByUsername(candidate)) {
+                return candidate;
+            }
+        }
+
+        return "user_" + UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+    }
+
+    private static String trimBoundaryPeriods(String value) {
+        String result = value;
+        while (result.startsWith(".")) {
+            result = result.substring(1);
+        }
+        while (result.endsWith(".")) {
+            result = result.substring(0, result.length() - 1);
+        }
+        return result;
+    }
+
+    private static String truncate(String value, int maxLength) {
+        return value.length() <= maxLength ? value : value.substring(0, maxLength);
+    }
+
+    private static boolean isValidAvatarUrl(String avatarUrl) {
+        return avatarUrl != null && !avatarUrl.isBlank() && avatarUrl.trim().length() <= 1024;
     }
 }

@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { LoginComponent } from './features/auth/login/login.component';
+import { OAuthCallbackComponent } from './features/auth/oauth-callback/oauth-callback.component';
 import { RegisterComponent } from './features/auth/register/register.component';
 import { AlbumDetailComponent } from './features/catalog/album-detail/album-detail.component';
 import { ArtistDetailComponent } from './features/catalog/artist-detail/artist-detail.component';
@@ -17,6 +18,7 @@ export const routes: Routes = [
   { path: '', component: HomeComponent, title: 'Muly | A rede social para quem ama música' },
   { path: 'login', component: LoginComponent, title: 'Entrar | Muly' },
   { path: 'register', component: RegisterComponent, title: 'Cadastrar | Muly' },
+  { path: 'oauth/callback', component: OAuthCallbackComponent, title: 'Autenticando... | Muly' },
   { path: 'catalog', component: CatalogSearchComponent, title: 'Catálogo | Muly' },
   { path: 'catalog/artists/:name', component: ArtistDetailComponent, title: 'Artista | Muly' },
   { path: 'catalog/albums/:spotifyId', component: AlbumDetailComponent, title: 'Álbum | Muly' },

@@ -7,6 +7,7 @@ spring:
     import:
       - optional:file:.env[.properties]
       - optional:file:backend/.env[.properties]
+      - optional:file:../.env[.properties]
 
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/muly}
@@ -48,3 +49,11 @@ imagekit:
   private-key: ${IMAGEKIT_PRIVATE_KEY:}
   public-key: ${IMAGEKIT_PUBLIC_KEY:}
   url-endpoint: ${IMAGEKIT_URL_ENDPOINT:}
+
+oauth2:
+  google:
+    client-id: ${GOOGLE_CLIENT_ID:}
+    client-secret: ${GOOGLE_CLIENT_SECRET:}
+  discord:
+    client-id: ${DISCORD_CLIENT_ID:}
+    client-secret: ${DISCORD_CLIENT_SECRET:}

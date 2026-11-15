@@ -14,6 +14,18 @@ export interface AuthResponse {
   username: string;
 }
 
+export type OAuthProvider = 'google' | 'discord';
+
+export interface OAuth2UrlResponse {
+  url: string;
+}
+
+export interface OAuth2CallbackRequest {
+  provider: OAuthProvider;
+  code: string;
+  redirectUri: string;
+}
+
 export interface ApiErrorResponse {
   status: number;
   error: string;
