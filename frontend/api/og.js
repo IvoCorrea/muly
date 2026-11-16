@@ -48,7 +48,7 @@ export default async function handler(req, res) {
 
   if (type === 'profile' && id) {
     canonicalPath = `/profile/${encodeURIComponent(id)}`;
-    image = `${origin}/api/og-profile?username=${encodeURIComponent(id)}`;
+    image = `${origin}/api/og-profile?username=${encodeURIComponent(id)}&v=2`;
     const profile = await fetchJson(`${API_BASE}/profile/${encodeURIComponent(id)}`);
     if (profile) {
       title = `@${profile.username} no Muly (${profile.totalReviews || 0} ${profile.totalReviews === 1 ? 'avaliação' : 'avaliações'})`;
