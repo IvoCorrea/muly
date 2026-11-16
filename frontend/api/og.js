@@ -48,29 +48,24 @@ export default async function handler(req, res) {
 
   if (type === 'profile' && id) {
     canonicalPath = `/profile/${encodeURIComponent(id)}`;
+    image = `${origin}/api/og-profile?username=${encodeURIComponent(id)}`;
     const profile = await fetchJson(`${API_BASE}/profile/${encodeURIComponent(id)}`);
     if (profile) {
       title = `@${profile.username} no Muly (${profile.totalReviews || 0} ${profile.totalReviews === 1 ? 'avaliação' : 'avaliações'})`;
       const parts = [];
+      if (profile.bio) {
+        parts.push(profile.bio);
+      }
       if (profile.favoriteAlbum) {
         parts.push(`★ Favorito: ${profile.favoriteAlbum.title} — ${profile.favoriteAlbum.artist}`);
-        if (profile.favoriteAlbum.coverUrl) {
-          image = profile.favoriteAlbum.coverUrl;
-        }
       }
       if (profile.currentTrack) {
         parts.push(`🎧 Ouvindo: ${profile.currentTrack.title} (${profile.currentTrack.artist || ''})`);
-        if (image === defaultImage && profile.currentTrack.coverUrl) {
-          image = profile.currentTrack.coverUrl;
-        }
       }
       if (profile.topAlbums && profile.topAlbums.length > 0) {
         const topTitles = profile.topAlbums.map(t => t.album?.title).filter(Boolean).join(', ');
         if (topTitles) {
           parts.push(`Top 4: ${topTitles}`);
-        }
-        if (image === defaultImage && profile.topAlbums[0]?.album?.coverUrl) {
-          image = profile.topAlbums[0].album.coverUrl;
         }
       }
       description = parts.length > 0
@@ -146,9 +141,10 @@ export default async function handler(req, res) {
 
   const fullUrl = `${origin}${canonicalPath}`;
   const isDefaultBanner = image === defaultImage;
-  const imgWidth = isDefaultBanner ? '1024' : '640';
-  const imgHeight = isDefaultBanner ? '572' : '640';
-  const twitterCard = isDefaultBanner ? 'summary_large_image' : 'summary';
+  const isProfileBanner = type === 'profile' && Boolean(id);
+  const imgWidth = isProfileBanner ? '1200' : isDefaultBanner ? '1024' : '640';
+  const imgHeight = isProfileBanner ? '630' : isDefaultBanner ? '572' : '640';
+  const twitterCard = (isProfileBanner || isDefaultBanner) ? 'summary_large_image' : 'summary';
 
   const html = `<!doctype html>
 <html lang="pt-BR">
