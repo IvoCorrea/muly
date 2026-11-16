@@ -42,7 +42,8 @@ export default async function handler(req, res) {
 
   let title = 'Muly | A rede social para quem ama música';
   let description = 'Catalogue o que você ouve, avalie álbuns e faixas, monte listas temáticas e compartilhe seu perfil musical.';
-  let image = `${origin}/logo-emerald.png`;
+  const defaultImage = `${origin}/og-banner.jpg`;
+  let image = defaultImage;
   let canonicalPath = '/';
 
   if (type === 'profile' && id) {
@@ -59,7 +60,7 @@ export default async function handler(req, res) {
       }
       if (profile.currentTrack) {
         parts.push(`🎧 Ouvindo: ${profile.currentTrack.title} (${profile.currentTrack.artist || ''})`);
-        if (image.endsWith('/logo-emerald.png') && profile.currentTrack.coverUrl) {
+        if (image === defaultImage && profile.currentTrack.coverUrl) {
           image = profile.currentTrack.coverUrl;
         }
       }
@@ -68,7 +69,7 @@ export default async function handler(req, res) {
         if (topTitles) {
           parts.push(`Top 4: ${topTitles}`);
         }
-        if (image.endsWith('/logo-emerald.png') && profile.topAlbums[0]?.album?.coverUrl) {
+        if (image === defaultImage && profile.topAlbums[0]?.album?.coverUrl) {
           image = profile.topAlbums[0].album.coverUrl;
         }
       }
@@ -144,6 +145,11 @@ export default async function handler(req, res) {
   }
 
   const fullUrl = `${origin}${canonicalPath}`;
+  const isDefaultBanner = image === defaultImage;
+  const imgWidth = isDefaultBanner ? '1024' : '640';
+  const imgHeight = isDefaultBanner ? '572' : '640';
+  const twitterCard = isDefaultBanner ? 'summary_large_image' : 'summary';
+
   const html = `<!doctype html>
 <html lang="pt-BR">
 <head>
@@ -158,10 +164,10 @@ export default async function handler(req, res) {
   <meta property="og:title" content="${escapeHtml(title)}">
   <meta property="og:description" content="${escapeHtml(description)}">
   <meta property="og:image" content="${escapeHtml(image)}">
-  <meta property="og:image:width" content="640">
-  <meta property="og:image:height" content="640">
+  <meta property="og:image:width" content="${imgWidth}">
+  <meta property="og:image:height" content="${imgHeight}">
 
-  <meta name="twitter:card" content="summary">
+  <meta name="twitter:card" content="${twitterCard}">
   <meta name="twitter:title" content="${escapeHtml(title)}">
   <meta name="twitter:description" content="${escapeHtml(description)}">
   <meta name="twitter:image" content="${escapeHtml(image)}">
